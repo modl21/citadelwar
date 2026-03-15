@@ -173,9 +173,6 @@ const Index = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="font-pixel text-xs text-amber-300 tracking-wider">
-                    100 SATS = 1 DEFENSE
-                  </p>
                   <p className="text-[10px] text-orange-200/60 max-w-[220px] mx-auto leading-relaxed">
                     Protect the Citadel at all costs.
                   </p>
