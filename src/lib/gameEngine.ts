@@ -12,8 +12,10 @@ import {
   GAME_HEIGHT,
   INITIAL_LIVES,
   INITIAL_MONEY,
+  FIRST_WAVE_COUNTDOWN,
   WAVE_COUNTDOWN,
-  SPAWN_DELAY,
+  SPAWN_DELAY_BASE,
+  SPAWN_DELAY_MIN,
   PATH_WIDTH,
   TOWER_COSTS,
   TOWER_STATS,
@@ -95,31 +97,84 @@ export function canPlaceTower(x: number, y: number, state: GameState): boolean {
 
 // ─── Wave composition ────────────────────────────────────────────────────────
 
+/** HP multiplier for a given wave — gentle early, accelerating later */
+function hpScale(wave: number): number {
+  // Wave 1 = 1.0x, wave 5 = 1.3x, wave 10 = 1.8x, wave 20 = 3.4x
+  return 1 + (wave - 1) * 0.08 + Math.max(0, wave - 8) * 0.1;
+}
+
+/** Speed multiplier — enemies get slightly faster over time */
+function speedScale(wave: number): number {
+  return 1 + Math.min(wave * 0.03, 0.6); // caps at +60% speed
+}
+
+/** Spawn delay for this wave (fewer frames = faster spawning) */
+function spawnDelay(wave: number): number {
+  return Math.max(SPAWN_DELAY_MIN, SPAWN_DELAY_BASE - wave * 2);
+}
+
 function buildWaveQueue(wave: number): InvaderType[] {
   const queue: InvaderType[] = [];
 
-  if (wave % 10 === 0) {
-    // Boss wave
-    queue.push('boss');
-    for (let i = 0; i < wave; i++) queue.push('drone');
-  } else if (wave % 5 === 0) {
-    // Tank wave
-    const tanks = 2 + Math.floor(wave / 5);
-    for (let i = 0; i < tanks; i++) queue.push('tank');
-    for (let i = 0; i < 4; i++) queue.push('drone');
-  } else if (wave % 3 === 0) {
-    // Scout rush
-    const scouts = 6 + wave;
-    for (let i = 0; i < scouts; i++) queue.push('scout');
-  } else {
-    // Regular drone wave
-    const count = 4 + Math.floor(wave * 1.8);
+  // ── Waves 1-3: Drones only, small counts ─────────────────────────────
+  if (wave <= 3) {
+    const count = 3 + wave * 2; // 5, 7, 9
     for (let i = 0; i < count; i++) queue.push('drone');
-    // Sprinkle scouts after wave 3
-    if (wave > 3) {
-      for (let i = 0; i < Math.floor(wave / 2); i++) queue.push('scout');
-    }
+    return queue;
   }
+
+  // ── Waves 4-6: Introduce scouts ──────────────────────────────────────
+  if (wave <= 6) {
+    const drones = 4 + wave;
+    const scouts = wave - 3; // 1, 2, 3
+    for (let i = 0; i < drones; i++) queue.push('drone');
+    for (let i = 0; i < scouts; i++) queue.push('scout');
+    return queue;
+  }
+
+  // ── Wave 7+: Mixed composition with increasing variety ───────────────
+
+  // Boss waves every 10
+  if (wave % 10 === 0) {
+    const bosses = Math.floor(wave / 10);
+    for (let i = 0; i < bosses; i++) queue.push('boss');
+    for (let i = 0; i < 4 + wave; i++) queue.push('drone');
+    for (let i = 0; i < Math.floor(wave / 4); i++) queue.push('scout');
+    return queue;
+  }
+
+  // Tank waves every 5 (but not 10)
+  if (wave % 5 === 0) {
+    const tanks = 1 + Math.floor(wave / 5);
+    for (let i = 0; i < tanks; i++) queue.push('tank');
+    for (let i = 0; i < 3 + wave; i++) queue.push('drone');
+    return queue;
+  }
+
+  // Scout rush every 4th wave
+  if (wave % 4 === 0) {
+    const scouts = 4 + Math.floor(wave * 1.2);
+    for (let i = 0; i < scouts; i++) queue.push('scout');
+    for (let i = 0; i < 3; i++) queue.push('drone');
+    return queue;
+  }
+
+  // Regular mixed waves
+  const drones = 3 + Math.floor(wave * 1.2);
+  for (let i = 0; i < drones; i++) queue.push('drone');
+
+  // Add scouts after wave 4
+  if (wave > 4) {
+    const scouts = Math.floor((wave - 4) * 0.6);
+    for (let i = 0; i < scouts; i++) queue.push('scout');
+  }
+
+  // Sprinkle tanks after wave 8
+  if (wave > 8) {
+    const tanks = Math.floor((wave - 8) / 3);
+    for (let i = 0; i < tanks; i++) queue.push('tank');
+  }
+
   return queue;
 }
 
@@ -141,7 +196,7 @@ export function createInitialState(startTime: number): GameState {
     waveActive: false,
     enemiesToSpawn: [],
     spawnTimer: 0,
-    waveCountdown: WAVE_COUNTDOWN,
+    waveCountdown: FIRST_WAVE_COUNTDOWN,
     frame: 0,
     startTime,
     buildingTowerType: null,
@@ -202,25 +257,28 @@ export function updateGame(state: GameState, input: InputState): GameState {
       if (ns.spawnTimer <= 0) {
         const type = ns.enemiesToSpawn.shift()!;
         const s = INVADER_STATS[type];
-        const hpScale = 1 + (ns.wave - 1) * 0.25;
+        const hp = Math.round(s.hp * hpScale(ns.wave));
+        const spd = s.speed * speedScale(ns.wave);
         const start = ns.path[0];
         ns.invaders.push({
           id: uid(), type,
           x: start.x, y: start.y,
-          hp: Math.round(s.hp * hpScale),
-          maxHp: Math.round(s.hp * hpScale),
-          speed: s.speed,
-          value: s.value,
+          hp,
+          maxHp: hp,
+          speed: spd,
+          value: s.value + Math.floor(ns.wave / 3), // slightly more reward at higher waves
           damage: 1,
           pathIndex: 0,
           frozen: 0,
         });
-        ns.spawnTimer = SPAWN_DELAY;
+        ns.spawnTimer = spawnDelay(ns.wave);
       }
     } else if (ns.invaders.length === 0) {
       ns.waveActive = false;
       ns.waveCountdown = WAVE_COUNTDOWN;
       ns.score += ns.wave * 50; // wave complete bonus
+      // Bonus money for surviving a wave
+      ns.money += 10 + ns.wave * 5;
     }
   }
 

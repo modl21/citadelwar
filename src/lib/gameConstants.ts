@@ -3,10 +3,12 @@ export const GAME_WIDTH = 640;
 export const GAME_HEIGHT = 480;
 
 // ─── Game Balance ─────────────────────────────────────────────────────────────
-export const INITIAL_LIVES = 20;
-export const INITIAL_MONEY = 200;
-export const WAVE_COUNTDOWN = 180;
-export const SPAWN_DELAY = 30;
+export const INITIAL_LIVES = 25;
+export const INITIAL_MONEY = 250;
+export const FIRST_WAVE_COUNTDOWN = 360; // 6s to build before wave 1
+export const WAVE_COUNTDOWN = 180; // 3s between later waves
+export const SPAWN_DELAY_BASE = 45; // frames between spawns (slows early, speeds up later)
+export const SPAWN_DELAY_MIN = 18; // fastest spawn rate at high waves
 
 // ─── Path ─────────────────────────────────────────────────────────────────────
 export const PATH_WIDTH = 28;
