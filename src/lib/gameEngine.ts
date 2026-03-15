@@ -86,11 +86,11 @@ export function distToPath(p: Position, path: Position[]): number {
   return minD;
 }
 
-/** Cost of placing a tower, increasing by 5% for each existing tower of the same type */
+/** Cost of placing a tower, increasing by 20% for each existing tower of the same type */
 export function getTowerCost(type: TowerType, state: GameState): number {
   const base = TOWER_COSTS[type];
   const count = state.towers.filter(t => t.type === type).length;
-  return Math.round(base * Math.pow(1.05, count));
+  return Math.round(base * Math.pow(1.2, count));
 }
 
 export function canPlaceTower(x: number, y: number, state: GameState): boolean {
