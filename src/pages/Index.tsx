@@ -94,7 +94,7 @@ const Index = () => {
 
       <div className="relative z-10 flex flex-col items-center min-h-full px-3 sm:px-4 py-4 sm:py-6 gap-4 sm:gap-5">
         {/* Header */}
-        <header className="w-full max-w-2xl flex items-center justify-between gap-4">
+        <header className="w-full max-w-4xl flex items-center justify-between gap-4">
           <a
             href="https://citadelarcade.com"
             target="_blank"
@@ -130,7 +130,7 @@ const Index = () => {
         </div>
 
         {/* Game Area — the canvas manages its own sizing */}
-        <div className="relative w-full max-w-[640px]">
+        <div className="relative w-full max-w-[960px]">
           <GameCanvas
             onGameOver={handleGameOver}
             isPlaying={phase === 'playing'}
@@ -139,7 +139,7 @@ const Index = () => {
 
           {/* Idle overlay */}
           {phase === 'idle' && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/65 backdrop-blur-[3px] rounded-lg" style={{ aspectRatio: '640/480' }}>
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/65 backdrop-blur-[3px] rounded-lg" style={{ aspectRatio: '960/640' }}>
               <div className="text-center space-y-4 p-6">
                 <div className="flex justify-center">
                   <div className="relative">
@@ -152,7 +152,7 @@ const Index = () => {
                   </div>
                 </div>
                 <p className="text-xs text-blue-200/60 max-w-[240px] mx-auto leading-relaxed">
-                  Build towers. Destroy invaders. Protect the Citadel.
+                  Protect the Citadel.
                 </p>
                 <Button
                   onClick={handleStartGame}
@@ -170,7 +170,7 @@ const Index = () => {
 
           {/* Ready overlay */}
           {phase === 'ready' && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 backdrop-blur-[2px] rounded-lg" style={{ aspectRatio: '640/480' }}>
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 backdrop-blur-[2px] rounded-lg" style={{ aspectRatio: '960/640' }}>
               <div className="text-center space-y-5 p-6">
                 <p className="font-pixel text-[10px] text-blue-500/70 tracking-wider">SATS RECEIVED</p>
                 <p className="font-pixel text-sm text-blue-300 tracking-wider">PREPARE DEFENSES</p>
@@ -187,7 +187,7 @@ const Index = () => {
 
           {/* Game Over overlay */}
           {phase === 'gameOver' && (
-            <div className="absolute inset-0 z-10" style={{ aspectRatio: '640/480' }}>
+            <div className="absolute inset-0 z-10" style={{ aspectRatio: '960/640' }}>
               <GameOverOverlay
                 score={finalScore}
                 isPublishing={isPublishing}
