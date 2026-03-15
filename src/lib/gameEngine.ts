@@ -32,7 +32,7 @@ const PATH: Position[] = [
   { x: 520, y: 360 },
   { x: 200, y: 360 },
   { x: 200, y: 440 },
-  { x: 660, y: 440 },
+  { x: 580, y: 440 },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -81,8 +81,11 @@ export function distToPath(p: Position, path: Position[]): number {
 export function canPlaceTower(x: number, y: number, state: GameState): boolean {
   // Must be on screen
   if (x < TOWER_SIZE || x > GAME_WIDTH - TOWER_SIZE || y < TOWER_SIZE || y > GAME_HEIGHT - TOWER_SIZE) return false;
-  // Not on path
-  if (distToPath({ x, y }, state.path) < PATH_WIDTH + TOWER_SIZE) return false;
+  // Not on path — allow placing close but not directly on the path
+  if (distToPath({ x, y }, state.path) < PATH_WIDTH * 0.5 + TOWER_SIZE * 0.6) return false;
+  // Not overlapping the citadel
+  const citadelEnd = state.path[state.path.length - 1];
+  if (dist({ x, y }, citadelEnd) < 55) return false;
   // Not overlapping another tower
   for (const t of state.towers) {
     if (dist(t, { x, y }) < TOWER_SIZE * 2 + 4) return false;

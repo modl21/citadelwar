@@ -86,22 +86,170 @@ function renderPath(ctx: CanvasRenderingContext2D, state: GameState, frame: numb
   ctx.arc(start.x, start.y, 8 + Math.sin(frame * 0.08) * 2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Citadel endpoint
-  const end = path[path.length - 1];
-  const pulse = Math.sin(frame * 0.06) * 0.2 + 0.8;
-  ctx.fillStyle = COLOR_CITADEL_GLOW;
+}
+
+// ─── Citadel Castle ──────────────────────────────────────────────────────────
+
+function renderCitadel(ctx: CanvasRenderingContext2D, state: GameState, frame: number) {
+  const end = state.path[state.path.length - 1];
+  const cx = end.x;
+  const cy = end.y;
+  const hpPct = Math.max(0, state.citadelHp / state.citadelMaxHp);
+
+  // Glow aura (dims with damage)
+  const glowAlpha = 0.15 + hpPct * 0.2;
+  const glowPulse = Math.sin(frame * 0.04) * 4;
+  const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 50 + glowPulse);
+  grad.addColorStop(0, `rgba(59,130,246,${glowAlpha})`);
+  grad.addColorStop(1, 'rgba(59,130,246,0)');
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(end.x, end.y, 24 * pulse, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 55 + glowPulse, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = COLOR_CITADEL;
-  ctx.beginPath();
-  ctx.arc(end.x, end.y, 14, 0, Math.PI * 2);
-  ctx.fill();
+
+  // ── Main keep (center block) ──────────────────────────────────────────
+  const keepW = 44;
+  const keepH = 52;
+  const keepX = cx - keepW / 2;
+  const keepY = cy - keepH / 2 - 4;
+
+  // Wall color shifts with damage (blue → dark gray when destroyed)
+  const wallR = Math.round(15 + hpPct * 20);
+  const wallG = Math.round(25 + hpPct * 45);
+  const wallB = Math.round(50 + hpPct * 80);
+  const wallColor = `rgb(${wallR},${wallG},${wallB})`;
+
+  // Keep body
+  ctx.fillStyle = wallColor;
+  ctx.fillRect(keepX, keepY + 8, keepW, keepH - 8);
+
+  // Battlements on keep
+  const bW = 7;
+  const bGap = 4;
+  for (let bx = keepX; bx < keepX + keepW - bW; bx += bW + bGap) {
+    ctx.fillRect(bx, keepY, bW, 12);
+  }
+
+  // ── Left tower ────────────────────────────────────────────────────────
+  const towerW = 18;
+  const ltX = keepX - towerW + 4;
+  const towerH = 60;
+  const towerY = cy - towerH / 2 - 8;
+
+  ctx.fillStyle = wallColor;
+  ctx.fillRect(ltX, towerY + 6, towerW, towerH - 6);
+  // Tower battlements
+  for (let bx = ltX; bx < ltX + towerW - 4; bx += 6) {
+    ctx.fillRect(bx, towerY, 4, 8);
+  }
+  // Tower window
+  ctx.fillStyle = hpPct > 0.3 ? 'rgba(96,165,250,0.5)' : 'rgba(80,20,20,0.4)';
+  ctx.fillRect(ltX + 6, towerY + 20, 5, 8);
+
+  // ── Right tower ───────────────────────────────────────────────────────
+  const rtX = keepX + keepW - 4;
+  ctx.fillStyle = wallColor;
+  ctx.fillRect(rtX, towerY + 6, towerW, towerH - 6);
+  for (let bx = rtX; bx < rtX + towerW - 4; bx += 6) {
+    ctx.fillRect(bx, towerY, 4, 8);
+  }
+  ctx.fillStyle = hpPct > 0.3 ? 'rgba(96,165,250,0.5)' : 'rgba(80,20,20,0.4)';
+  ctx.fillRect(rtX + 6, towerY + 20, 5, 8);
+
+  // ── Gate ──────────────────────────────────────────────────────────────
+  const gateW = 12;
+  const gateH = 16;
   ctx.fillStyle = '#060a14';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('C', end.x, end.y + 1);
+  ctx.fillRect(cx - gateW / 2, keepY + keepH - gateH, gateW, gateH);
+  // Gate arch
+  ctx.beginPath();
+  ctx.arc(cx, keepY + keepH - gateH, gateW / 2, Math.PI, 0);
+  ctx.fill();
+
+  // ── Keep windows (lit when healthy) ───────────────────────────────────
+  const windowColor = hpPct > 0.3 ? 'rgba(96,165,250,0.6)' : 'rgba(60,15,15,0.4)';
+  ctx.fillStyle = windowColor;
+  ctx.fillRect(keepX + 8, keepY + 18, 4, 6);
+  ctx.fillRect(keepX + keepW - 12, keepY + 18, 4, 6);
+  ctx.fillRect(keepX + 8, keepY + 30, 4, 6);
+  ctx.fillRect(keepX + keepW - 12, keepY + 30, 4, 6);
+
+  // ── Banner / flag on top ──────────────────────────────────────────────
+  if (hpPct > 0.1) {
+    const flagWave = Math.sin(frame * 0.12) * 3;
+    ctx.fillStyle = '#1e40af';
+    ctx.fillRect(cx - 1, towerY - 14, 2, 14); // Pole
+    ctx.fillStyle = hpPct > 0.5 ? '#3b82f6' : '#6b7280';
+    ctx.beginPath();
+    ctx.moveTo(cx + 1, towerY - 14);
+    ctx.lineTo(cx + 12, towerY - 10 + flagWave);
+    ctx.lineTo(cx + 1, towerY - 6);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // ── Damage effects ────────────────────────────────────────────────────
+  if (hpPct < 0.8) {
+    // Cracks
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 1;
+    // Crack 1
+    ctx.beginPath();
+    ctx.moveTo(keepX + 10, keepY + 15);
+    ctx.lineTo(keepX + 16, keepY + 25);
+    ctx.lineTo(keepX + 13, keepY + 35);
+    ctx.stroke();
+  }
+
+  if (hpPct < 0.5) {
+    // More cracks and rubble dots
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(keepX + keepW - 8, keepY + 12);
+    ctx.lineTo(keepX + keepW - 14, keepY + 28);
+    ctx.stroke();
+    // Rubble at base
+    ctx.fillStyle = 'rgba(50,50,70,0.5)';
+    ctx.fillRect(keepX - 3, keepY + keepH - 4, 6, 4);
+    ctx.fillRect(keepX + keepW - 4, keepY + keepH - 6, 5, 6);
+  }
+
+  if (hpPct < 0.25) {
+    // Heavy damage — missing battlements, fire/smoke
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(keepX + 2, keepY, bW, 12); // Missing battlement
+    ctx.fillRect(ltX, towerY, 4, 8); // Missing tower battlement
+    // Smoke
+    const smokeAlpha = 0.2 + Math.sin(frame * 0.08) * 0.1;
+    ctx.fillStyle = `rgba(120,120,120,${smokeAlpha})`;
+    ctx.beginPath();
+    ctx.arc(cx - 8, towerY - 6 - Math.sin(frame * 0.05) * 3, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + 10, towerY - 4 - Math.cos(frame * 0.07) * 4, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // Fire glow
+    const fireAlpha = 0.3 + Math.sin(frame * 0.15) * 0.15;
+    ctx.fillStyle = `rgba(239,68,68,${fireAlpha})`;
+    ctx.beginPath();
+    ctx.arc(keepX + 8, keepY + 18, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── HP bar under citadel ──────────────────────────────────────────────
+  const barW = 50;
+  const barH = 5;
+  const barX = cx - barW / 2;
+  const barY = cy + keepH / 2 + 6;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+  const hpColor = hpPct > 0.5 ? '#3b82f6' : hpPct > 0.25 ? '#f59e0b' : '#ef4444';
+  ctx.fillStyle = hpColor;
+  ctx.fillRect(barX, barY, barW * hpPct, barH);
+  // Border
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX - 1, barY - 1, barW + 2, barH + 2);
 }
 
 // ─── Towers ──────────────────────────────────────────────────────────────────
@@ -318,6 +466,7 @@ function renderGameOver(ctx: CanvasRenderingContext2D, state: GameState) {
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, frame: number): void {
   renderBg(ctx);
   renderPath(ctx, state, frame);
+  renderCitadel(ctx, state, frame);
 
   for (const t of state.towers) renderTower(ctx, t);
   for (const inv of state.invaders) renderInvader(ctx, inv, frame);
