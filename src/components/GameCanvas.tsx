@@ -246,7 +246,7 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
             <TowerBtn
               key={t}
               type={t}
-              cost={Math.round(TOWER_COSTS[t] * Math.pow(1.25, towerCounts[t]))}
+              cost={Math.round(TOWER_COSTS[t] * Math.pow(1.05, towerCounts[t]))}
               money={money}
               selected={selected === t}
               onSelect={() => setSelected(prev => prev === t ? null : t)}
