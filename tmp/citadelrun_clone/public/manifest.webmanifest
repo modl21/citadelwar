@@ -1,0 +1,9 @@
+{
+  "name": "Sats Invaders",
+  "short_name": "SatsInvaders",
+  "description": "100 Sats. One Life. Weekly Leaderboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#22c55e"
+}
