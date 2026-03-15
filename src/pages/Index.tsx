@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Zap, Play, Smartphone, Keyboard, Flame, Shield, Swords } from 'lucide-react';
+import { Zap, Play, Smartphone, Keyboard, Shield, Swords } from 'lucide-react';
 import type { NSecSigner } from '@nostrify/nostrify';
 
 import { Button } from '@/components/ui/button';

@@ -8,7 +8,6 @@ import {
   COLOR_GRID,
   COLOR_CITADEL,
   COLOR_RANGE,
-  COLOR_RANGE_INVALID,
   TOWER_STATS,
   INVADER_STATS
 } from './gameConstants';

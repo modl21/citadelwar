@@ -1,10 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
 import type {
   GameState,
-  Tower,
   Invader,
   Bullet,
-  Particle,
   TowerType,
   InvaderType,
   Position,
@@ -13,7 +10,6 @@ import type {
 import {
   GAME_WIDTH,
   GAME_HEIGHT,
-  TILE_SIZE,
   INITIAL_LIVES,
   INITIAL_MONEY,
   WAVE_DELAY,
@@ -156,20 +152,19 @@ export function updateGame(state: GameState, input: InputState, now: number): Ga
     
     if (ns.money >= cost) {
       // Check collision/valid placement logic here (simplified for now)
-      let valid = true;
-      // Could check distance to path < TILE_SIZE/2 to blocking
+      const valid = true;
+      // Could check distance to path to prevent blocking
       
       if (valid) {
         ns.money -= cost;
         ns.towers = [...ns.towers, {
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           type,
           x,
           y,
           range: TOWER_STATS[type].range,
           damage: TOWER_STATS[type].damage,
           fireRate: TOWER_STATS[type].fireRate,
-          fireRateCounter: 0, // Assuming fireRate is shots per sec, we convert to frame
           cooldown: 0,
           level: 1,
           active: true,
@@ -191,7 +186,7 @@ export function updateGame(state: GameState, input: InputState, now: number): Ga
         // Spawn at start of path
         const start = ns.path[0];
         ns.invaders = [...ns.invaders, {
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           type,
           x: start.x,
           y: start.y,
@@ -236,7 +231,6 @@ export function updateGame(state: GameState, input: InputState, now: number): Ga
     }
     
     // Logic to move along path segments
-    const currentWaypoint = ns.path[inv.pathIndex];
     const nextWaypoint = ns.path[inv.pathIndex + 1];
     
     if (!nextWaypoint) {
@@ -296,7 +290,7 @@ export function updateGame(state: GameState, input: InputState, now: number): Ga
       // Fire if ready
       if (cooldown <= 0) {
         ns.bullets.push({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           x: tower.x,
           y: tower.y,
           targetId: target.id,

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { Shield, Zap, Crosshair, Clock, Play } from 'lucide-react';
+import { Shield, Zap, Crosshair, Clock } from 'lucide-react';
 import { createInitialState, updateGame } from '@/lib/gameEngine';
 import { renderGame } from '@/lib/gameRenderer';
 import {
