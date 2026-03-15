@@ -1,8 +1,8 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Shield, Zap, Crosshair, Clock } from 'lucide-react';
-import { createInitialState, updateGame, canPlaceTower } from '@/lib/gameEngine';
+import { createInitialState, updateGame, canPlaceTower, getTowerCost } from '@/lib/gameEngine';
 import { renderGame } from '@/lib/gameRenderer';
-import { GAME_WIDTH, GAME_HEIGHT, TOWER_COSTS, TOWER_STATS } from '@/lib/gameConstants';
+import { GAME_WIDTH, GAME_HEIGHT, TOWER_COSTS } from '@/lib/gameConstants';
 import type { GameState, TowerType } from '@/lib/gameTypes';
 import { cn } from '@/lib/utils';
 
@@ -22,11 +22,10 @@ const TOWER_LABELS: Record<TowerType, string> = {
   slow: 'FREEZE',
 };
 
-function TowerBtn({ type, money, selected, onSelect }: {
-  type: TowerType; money: number; selected: boolean; onSelect: () => void;
+function TowerBtn({ type, cost, money, selected, onSelect }: {
+  type: TowerType; cost: number; money: number; selected: boolean; onSelect: () => void;
 }) {
   const Icon = TOWER_ICONS[type];
-  const cost = TOWER_COSTS[type];
   const affordable = money >= cost;
 
   return (
@@ -75,6 +74,13 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
   const [hp, setHp] = useState(0);
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<TowerType | null>(null);
+  const [towerCounts, setTowerCounts] = useState<Record<TowerType, number>>({ basic: 0, rapid: 0, sniper: 0, slow: 0 });
+
+  const syncTowerCounts = useCallback((s: GameState) => {
+    const counts: Record<TowerType, number> = { basic: 0, rapid: 0, sniper: 0, slow: 0 };
+    for (const t of s.towers) counts[t.type]++;
+    setTowerCounts(counts);
+  }, []);
 
   // ── Coordinate mapping ──────────────────────────────────────────────────
   const toGameCoords = useCallback((clientX: number, clientY: number) => {
@@ -120,9 +126,10 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
 
     const { x, y } = toGameCoords(e.clientX, e.clientY);
 
-    if (stateRef.current.money >= TOWER_COSTS[selected] && canPlaceTower(x, y, stateRef.current)) {
+    if (stateRef.current.money >= getTowerCost(selected, stateRef.current) && canPlaceTower(x, y, stateRef.current)) {
       stateRef.current = updateGame(stateRef.current, { placeTower: { type: selected, x, y } });
       setMoney(stateRef.current.money);
+      syncTowerCounts(stateRef.current);
     }
   }, [isPlaying, selected, toGameCoords]);
 
@@ -146,6 +153,7 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
         setWave(s.wave);
         setHp(Math.ceil(s.citadelHp));
         setScore(s.score);
+        syncTowerCounts(s);
       }
     } else if (!gameOverFiredRef.current) {
       gameOverFiredRef.current = true;
@@ -238,6 +246,7 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
             <TowerBtn
               key={t}
               type={t}
+              cost={Math.round(TOWER_COSTS[t] * Math.pow(1.25, towerCounts[t]))}
               money={money}
               selected={selected === t}
               onSelect={() => setSelected(prev => prev === t ? null : t)}

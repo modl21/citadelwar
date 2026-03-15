@@ -86,6 +86,13 @@ export function distToPath(p: Position, path: Position[]): number {
   return minD;
 }
 
+/** Cost of placing a tower, increasing by 25% for each existing tower of the same type */
+export function getTowerCost(type: TowerType, state: GameState): number {
+  const base = TOWER_COSTS[type];
+  const count = state.towers.filter(t => t.type === type).length;
+  return Math.round(base * Math.pow(1.25, count));
+}
+
 export function canPlaceTower(x: number, y: number, state: GameState): boolean {
   // Must be on screen
   if (x < TOWER_SIZE || x > GAME_WIDTH - TOWER_SIZE || y < TOWER_SIZE || y > GAME_HEIGHT - TOWER_SIZE) return false;
@@ -235,7 +242,7 @@ export function updateGame(state: GameState, input: InputState): GameState {
   // ── Tower placement ──────────────────────────────────────────────────────
   if (input.placeTower) {
     const { type, x, y } = input.placeTower;
-    const cost = TOWER_COSTS[type];
+    const cost = getTowerCost(type, ns);
     if (ns.money >= cost && canPlaceTower(x, y, ns)) {
       ns.money -= cost;
       const s = TOWER_STATS[type];
@@ -344,15 +351,18 @@ export function updateGame(state: GameState, input: InputState): GameState {
       tower.angle = a;
       tower.cooldown = Math.round(60 / tower.fireRate);
 
-      const bulletSpeed = tower.type === 'sniper' ? 14 : 7;
+      const isSniper = tower.type === 'sniper';
+      const bulletSpeed = isSniper ? 18 : 7;
       ns.bullets.push({
         x: tower.x + Math.cos(a) * TOWER_SIZE,
         y: tower.y + Math.sin(a) * TOWER_SIZE,
         vx: Math.cos(a) * bulletSpeed,
         vy: Math.sin(a) * bulletSpeed,
+        speed: bulletSpeed,
         damage: tower.damage,
-        type: tower.type === 'slow' ? 'slow' : tower.type === 'sniper' ? 'laser' : 'basic',
+        type: tower.type === 'slow' ? 'slow' : isSniper ? 'laser' : 'basic',
         color: TOWER_STATS[tower.type].color,
+        targetId: isSniper ? bestInv.id : undefined,
       });
     }
   }
@@ -360,7 +370,20 @@ export function updateGame(state: GameState, input: InputState): GameState {
   // ── Bullet movement & collision ──────────────────────────────────────────
   const aliveBullets: Bullet[] = [];
   for (const b of ns.bullets) {
-    const nb: Bullet = { ...b, x: b.x + b.vx, y: b.y + b.vy };
+    let bvx = b.vx;
+    let bvy = b.vy;
+
+    // Homing: sniper laser bullets track their target
+    if (b.targetId) {
+      const target = ns.invaders.find(inv => inv.id === b.targetId && inv.hp > 0);
+      if (target) {
+        const a = angle(b, target);
+        bvx = Math.cos(a) * b.speed;
+        bvy = Math.sin(a) * b.speed;
+      }
+    }
+
+    const nb: Bullet = { ...b, x: b.x + bvx, y: b.y + bvy, vx: bvx, vy: bvy };
     if (nb.x < -20 || nb.x > GAME_WIDTH + 20 || nb.y < -20 || nb.y > GAME_HEIGHT + 20) continue;
 
     let hit = false;

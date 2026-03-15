@@ -33,8 +33,10 @@ export interface Bullet extends Position {
   vx: number;
   vy: number;
   damage: number;
+  speed: number;
   type: 'basic' | 'laser' | 'slow';
   color: string;
+  targetId?: string;
 }
 
 export interface Particle {

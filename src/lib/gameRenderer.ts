@@ -14,7 +14,7 @@ import {
   INVADER_STATS,
   TOWER_COSTS,
 } from './gameConstants';
-import { canPlaceTower } from './gameEngine';
+import { canPlaceTower, getTowerCost } from './gameEngine';
 
 // ─── Background ──────────────────────────────────────────────────────────────
 
@@ -375,7 +375,7 @@ function renderGhost(ctx: CanvasRenderingContext2D, state: GameState) {
   const y = state.cursorY;
   if (x < 0 || y < 0) return;
 
-  const valid = canPlaceTower(x, y, state) && state.money >= TOWER_COSTS[state.buildingTowerType];
+  const valid = canPlaceTower(x, y, state) && state.money >= getTowerCost(state.buildingTowerType, state);
   const s = TOWER_STATS[state.buildingTowerType];
 
   // Range circle
