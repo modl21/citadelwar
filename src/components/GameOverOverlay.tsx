@@ -21,17 +21,17 @@ export function GameOverOverlay({ score, isPublishing, onPlayAgain }: GameOverOv
         </h2>
 
         <div className="space-y-1">
-          <p className="text-[10px] text-orange-300/50 font-pixel">FINAL SCORE</p>
+          <p className="text-[10px] text-blue-300/50 font-pixel">FINAL SCORE</p>
           <div className="flex items-center justify-center gap-2">
-            <Zap className="size-5 text-amber-400 fill-amber-500" />
-            <span className="font-pixel text-xl sm:text-2xl text-amber-300 tabular-nums drop-shadow-[0_0_8px_rgba(245,158,11,0.35)]">
+            <Zap className="size-5 text-blue-400 fill-blue-500" />
+            <span className="font-pixel text-xl sm:text-2xl text-blue-300 tabular-nums drop-shadow-[0_0_8px_rgba(96,165,250,0.35)]">
               {score.toLocaleString()}
             </span>
           </div>
         </div>
 
         {isPublishing && (
-          <div className="flex items-center justify-center gap-2 text-orange-300/40">
+          <div className="flex items-center justify-center gap-2 text-blue-300/40">
             <Loader2 className="size-3 animate-spin" />
             <span className="text-[10px] font-pixel">SAVING SCORE...</span>
           </div>
@@ -39,7 +39,7 @@ export function GameOverOverlay({ score, isPublishing, onPlayAgain }: GameOverOv
 
         <Button
           onClick={onPlayAgain}
-          className="bg-amber-500 text-black font-pixel text-xs hover:bg-amber-400 h-10 px-6 shadow-[0_0_16px_rgba(245,158,11,0.2)] border border-amber-600/50"
+          className="bg-blue-500 text-white font-pixel text-xs hover:bg-blue-400 h-10 px-6 shadow-[0_0_16px_rgba(59,130,246,0.25)] border border-blue-400/50"
         >
           <RotateCcw className="size-3.5 mr-2" />
           PLAY AGAIN (100 SATS)

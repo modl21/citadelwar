@@ -37,16 +37,16 @@ function TowerBtn({ type, money, selected, onSelect }: {
         'flex flex-col items-center justify-center rounded-lg border-2 transition-all active:scale-95 select-none',
         'h-[52px] w-[52px] sm:h-16 sm:w-16 p-0.5 sm:p-1',
         selected
-          ? 'border-amber-400 bg-amber-900/50 shadow-[0_0_12px_rgba(251,191,36,0.35)] scale-105'
-          : 'border-amber-900/40 bg-black/80 hover:border-amber-700/60',
+          ? 'border-blue-400 bg-blue-900/50 shadow-[0_0_12px_rgba(96,165,250,0.35)] scale-105'
+          : 'border-blue-900/40 bg-black/80 hover:border-blue-700/60',
         !affordable && !selected && 'opacity-35 grayscale pointer-events-none',
       )}
     >
-      <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', selected ? 'text-amber-400' : 'text-amber-200/70')} />
-      <span className={cn('text-[7px] sm:text-[9px] font-pixel leading-none mt-0.5', selected ? 'text-amber-100' : 'text-amber-200/50')}>
+      <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', selected ? 'text-blue-400' : 'text-blue-200/70')} />
+      <span className={cn('text-[7px] sm:text-[9px] font-pixel leading-none mt-0.5', selected ? 'text-blue-100' : 'text-blue-200/50')}>
         {TOWER_LABELS[type]}
       </span>
-      <span className={cn('text-[7px] sm:text-[9px] mt-0.5', affordable ? 'text-amber-400' : 'text-red-400')}>
+      <span className={cn('text-[7px] sm:text-[9px] mt-0.5', affordable ? 'text-blue-400' : 'text-red-400')}>
         {cost}⚡
       </span>
     </button>
@@ -200,7 +200,7 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
           width={GAME_WIDTH}
           height={GAME_HEIGHT}
           className={cn(
-            'w-full h-full rounded-lg border border-amber-900/50 shadow-[0_8px_40px_rgba(0,0,0,0.6)] touch-none',
+            'w-full h-full rounded-lg border border-blue-900/50 shadow-[0_8px_40px_rgba(0,0,0,0.6),0_0_20px_rgba(59,130,246,0.08)] touch-none',
             selected ? 'cursor-crosshair' : 'cursor-default',
           )}
           style={{ imageRendering: 'pixelated' }}
@@ -212,18 +212,18 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
         {isPlaying && (
           <div className="absolute top-1.5 left-1.5 right-1.5 flex items-start justify-between pointer-events-none">
             <div className="flex gap-1.5 sm:gap-2">
-              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-amber-400 border border-amber-900/30">
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-blue-400 border border-blue-900/30">
                 ⚡{money}
               </span>
-              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-red-400 border border-amber-900/30">
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-red-400 border border-blue-900/30">
                 ❤{hp}
               </span>
             </div>
             <div className="flex gap-1.5 sm:gap-2">
-              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-blue-400 border border-amber-900/30">
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-cyan-400 border border-blue-900/30">
                 W{wave}
               </span>
-              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-white border border-amber-900/30">
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-white border border-blue-900/30">
                 {score}
               </span>
             </div>
@@ -233,7 +233,7 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
 
       {/* Tower selection bar */}
       {isPlaying && (
-        <div className="mt-3 w-full max-w-md flex items-center justify-center gap-2 sm:gap-3 px-3 py-2 sm:py-3 bg-black/70 backdrop-blur rounded-xl border border-amber-900/40">
+        <div className="mt-3 w-full max-w-md flex items-center justify-center gap-2 sm:gap-3 px-3 py-2 sm:py-3 bg-black/70 backdrop-blur rounded-xl border border-blue-900/40">
           {(['basic', 'rapid', 'sniper', 'slow'] as TowerType[]).map((t) => (
             <TowerBtn
               key={t}
@@ -245,10 +245,10 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
           ))}
 
           {/* Hint */}
-          <div className="hidden sm:block ml-3 pl-3 border-l border-white/10 text-[10px] font-pixel text-amber-200/50 leading-snug min-w-[100px]">
+          <div className="hidden sm:block ml-3 pl-3 border-l border-white/10 text-[10px] font-pixel text-blue-200/50 leading-snug min-w-[100px]">
             {selected ? (
               <>
-                <div className="text-amber-400 uppercase">{selected}</div>
+                <div className="text-blue-400 uppercase">{selected}</div>
                 <div>{isMobile ? 'TAP' : 'CLICK'} TO BUILD</div>
               </>
             ) : (

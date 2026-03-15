@@ -87,9 +87,9 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-full bg-[#0a0805] text-foreground overflow-y-auto">
+    <div className="min-h-full bg-[#060a14] text-foreground overflow-y-auto">
       {/* Cinematic background effects */}
-      <div className="fixed inset-x-0 top-0 h-56 pointer-events-none z-0 bg-gradient-to-b from-amber-900/10 to-transparent" />
+      <div className="fixed inset-x-0 top-0 h-56 pointer-events-none z-0 bg-gradient-to-b from-blue-900/15 to-transparent" />
       <div className="fixed inset-0 pointer-events-none z-[45] bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.35)_100%)]" />
 
       <div className="relative z-10 flex flex-col items-center min-h-full px-3 sm:px-4 py-4 sm:py-6 gap-4 sm:gap-5">
@@ -101,7 +101,7 @@ const Index = () => {
             rel="noopener noreferrer"
             className="transition-transform hover:scale-105 active:scale-95"
           >
-            <div className="flex h-8 sm:h-10 items-center justify-center rounded-sm bg-white px-2 sm:px-3 shadow-[0_0_20px_rgba(255,255,255,0.08)]">
+            <div className="flex h-8 sm:h-10 items-center justify-center rounded-sm bg-white px-2 sm:px-3 shadow-[0_0_20px_rgba(96,165,250,0.12)]">
               <span className="text-[11px] sm:text-[13px] font-[900] tracking-tighter text-black uppercase whitespace-nowrap" style={{ fontFamily: 'Inter, sans-serif' }}>
                 CITADEL ARCADE
               </span>
@@ -121,10 +121,10 @@ const Index = () => {
 
         {/* Title */}
         <div className="text-center space-y-1">
-          <h1 className="font-pixel text-lg sm:text-xl md:text-2xl text-amber-300 tracking-[0.22em] animate-float drop-shadow-[0_0_14px_rgba(245,158,11,0.5)]">
+          <h1 className="font-pixel text-lg sm:text-xl md:text-2xl text-blue-300 tracking-[0.22em] animate-float drop-shadow-[0_0_14px_rgba(96,165,250,0.5)]">
             CITADEL WAR
           </h1>
-          <p className="text-[11px] sm:text-xs text-orange-200/60 max-w-xs mx-auto tracking-wide">
+          <p className="text-[11px] sm:text-xs text-blue-200/50 max-w-xs mx-auto tracking-wide">
             Defend the fortress. Repel the invaders.
           </p>
         </div>
@@ -143,25 +143,25 @@ const Index = () => {
               <div className="text-center space-y-4 p-6">
                 <div className="flex justify-center">
                   <div className="relative">
-                    <div className="size-14 rounded-xl bg-orange-800/30 border border-orange-600/40 flex items-center justify-center animate-float">
-                      <Shield className="size-7 text-amber-400 fill-amber-500/60" />
+                    <div className="size-14 rounded-xl bg-blue-800/30 border border-blue-600/40 flex items-center justify-center animate-float">
+                      <Shield className="size-7 text-blue-400 fill-blue-500/60" />
                     </div>
-                    <div className="absolute -top-1 -right-1 size-4 bg-amber-500 rounded-full flex items-center justify-center">
-                      <Swords className="size-2.5 text-black fill-black" />
+                    <div className="absolute -top-1 -right-1 size-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Swords className="size-2.5 text-white fill-white" />
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-orange-200/60 max-w-[240px] mx-auto leading-relaxed">
+                <p className="text-xs text-blue-200/60 max-w-[240px] mx-auto leading-relaxed">
                   Build towers. Destroy invaders. Protect the Citadel.
                 </p>
                 <Button
                   onClick={handleStartGame}
-                  className="bg-amber-500 text-black font-pixel text-xs hover:bg-amber-400 h-12 px-8 shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_20px_rgba(245,158,11,0.25)] border border-amber-600/50"
+                  className="bg-blue-500 text-white font-pixel text-xs hover:bg-blue-400 h-12 px-8 shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_20px_rgba(59,130,246,0.3)] border border-blue-400/50"
                 >
                   <Zap className="size-4 mr-2 fill-current" />
                   INSERT COIN
                 </Button>
-                <p className="text-[9px] font-pixel text-orange-300/40">
+                <p className="text-[9px] font-pixel text-blue-300/40">
                   {isMobile ? 'TAP TO PLACE TOWERS' : 'CLICK TO PLACE TOWERS'}
                 </p>
               </div>
@@ -172,11 +172,11 @@ const Index = () => {
           {phase === 'ready' && (
             <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 backdrop-blur-[2px] rounded-lg" style={{ aspectRatio: '640/480' }}>
               <div className="text-center space-y-5 p-6">
-                <p className="font-pixel text-[10px] text-amber-500/70 tracking-wider">SATS RECEIVED</p>
-                <p className="font-pixel text-sm text-amber-300 tracking-wider">PREPARE DEFENSES</p>
+                <p className="font-pixel text-[10px] text-blue-500/70 tracking-wider">SATS RECEIVED</p>
+                <p className="font-pixel text-sm text-blue-300 tracking-wider">PREPARE DEFENSES</p>
                 <Button
                   onClick={handleLaunchGame}
-                  className="bg-amber-500 text-black font-pixel text-sm hover:bg-amber-400 h-14 px-10 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(245,158,11,0.3)] animate-pulse-glow border border-amber-600/50"
+                  className="bg-blue-500 text-white font-pixel text-sm hover:bg-blue-400 h-14 px-10 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(59,130,246,0.3)] animate-pulse-glow border border-blue-400/50"
                 >
                   <Play className="size-5 mr-2 fill-current" />
                   START WAVE
@@ -198,21 +198,21 @@ const Index = () => {
         </div>
 
         {/* Total play count */}
-        <p className="text-[9px] font-pixel text-orange-200/30 tracking-wider">
+        <p className="text-[9px] font-pixel text-blue-200/25 tracking-wider">
           TOTAL WARS {typeof totalPlayCount === 'number' ? totalPlayCount.toLocaleString() : '...'}
         </p>
 
         <Leaderboard />
 
-        <footer className="text-center text-[10px] text-orange-300/25 pb-4 space-y-1">
+        <footer className="text-center text-[10px] text-blue-300/20 pb-4 space-y-1">
           <p>
-            Scores on <span className="text-amber-500/40">Nostr</span>
+            Scores on <span className="text-blue-400/40">Nostr</span>
             {' '}&middot;{' '}
-            Payments via <span className="text-amber-500/40">Lightning</span>
+            Payments via <span className="text-blue-400/40">Lightning</span>
           </p>
           <p>
             Vibed with{' '}
-            <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="text-amber-500/40 hover:text-amber-400/70 transition-colors">
+            <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="text-blue-400/40 hover:text-blue-300/70 transition-colors">
               Shakespeare
             </a>
           </p>

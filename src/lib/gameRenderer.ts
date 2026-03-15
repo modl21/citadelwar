@@ -97,7 +97,7 @@ function renderPath(ctx: CanvasRenderingContext2D, state: GameState, frame: numb
   ctx.beginPath();
   ctx.arc(end.x, end.y, 14, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#0a0805';
+  ctx.fillStyle = '#060a14';
   ctx.font = 'bold 12px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -110,11 +110,11 @@ function renderTower(ctx: CanvasRenderingContext2D, t: Tower) {
   const s = TOWER_STATS[t.type];
 
   // Base platform
-  ctx.fillStyle = '#1e293b';
+  ctx.fillStyle = '#0f1f3d';
   ctx.beginPath();
   ctx.arc(t.x, t.y, TOWER_SIZE, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.strokeStyle = 'rgba(96,165,250,0.2)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -141,7 +141,7 @@ function renderTower(ctx: CanvasRenderingContext2D, t: Tower) {
   ctx.restore();
 
   // Center dot
-  ctx.fillStyle = '#e2e8f0';
+  ctx.fillStyle = '#93c5fd';
   ctx.beginPath();
   ctx.arc(t.x, t.y, 4, 0, Math.PI * 2);
   ctx.fill();
@@ -267,7 +267,7 @@ function renderHUD(ctx: CanvasRenderingContext2D, state: GameState) {
     const secs = Math.ceil(state.waveCountdown / 60);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(GAME_WIDTH / 2 - 60, GAME_HEIGHT / 2 - 16, 120, 32);
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = '#60a5fa';
     ctx.font = '12px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -279,7 +279,7 @@ function renderHUD(ctx: CanvasRenderingContext2D, state: GameState) {
     const secs = Math.ceil(state.waveCountdown / 60);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(GAME_WIDTH / 2 - 80, GAME_HEIGHT / 2 - 24, 160, 48);
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = '#60a5fa';
     ctx.font = '10px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
