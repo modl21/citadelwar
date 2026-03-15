@@ -12,7 +12,7 @@ export default defineConfig(() => ({
   plugins: [
     react(),
   ],
-  base: "/citadelwar/",
+  base: "/",
   test: {
     globals: true,
     environment: 'jsdom',
