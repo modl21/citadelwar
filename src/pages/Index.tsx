@@ -18,17 +18,17 @@ import type { GameInvoice } from '@/lib/lightning';
 const Index = () => {
   useSeoMeta({
     title: 'Citadel War - Defend Your Fortress',
-    description: 'Defend your Citadel from the endless waves of invaders.',
+    description: 'Protect the Citadel.',
     ogTitle: 'Citadel War',
-    ogDescription: 'Defend your Citadel from the endless waves of invaders.',
+    ogDescription: 'Protect the Citadel.',
     ogType: 'website',
     ogSiteName: 'Citadel War',
     ogUrl: 'https://citadelwar.com',
-    ogImage: 'https://citadelwar.com/citadelwar.jpg',
+    ogImage: 'https://blossom.ditto.pub/73791a4a53fef178065a2277ee9507637f5fa40c9adbef0426222387aab57452.jpeg',
     twitterCard: 'summary_large_image',
     twitterTitle: 'Citadel War',
-    twitterDescription: 'Defend your Citadel from the endless waves of invaders.',
-    twitterImage: 'https://citadelwar.com/citadelwar.jpg',
+    twitterDescription: 'Protect the Citadel.',
+    twitterImage: 'https://blossom.ditto.pub/73791a4a53fef178065a2277ee9507637f5fa40c9adbef0426222387aab57452.jpeg',
   });
 
   const isMobile = useIsMobile();
