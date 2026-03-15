@@ -1,89 +1,48 @@
 // ─── Canvas ───────────────────────────────────────────────────────────────────
-export const GAME_WIDTH = 480;
-export const GAME_HEIGHT = 260;
+export const GAME_WIDTH = 800;
+export const GAME_HEIGHT = 600;
+export const TILE_SIZE = 40;
 
-// ─── Ground ───────────────────────────────────────────────────────────────────
-export const GROUND_Y = GAME_HEIGHT - 40; // y where the ground surface is
-export const GROUND_HEIGHT = 40;
+// ─── Game Balance ─────────────────────────────────────────────────────────────
+export const INITIAL_LIVES = 20;
+export const INITIAL_MONEY = 150;
+export const WAVE_DELAY = 600; // frames between waves
+export const SPAWN_DELAY = 45; // frames between enemies in a wave
 
-// ─── Player ───────────────────────────────────────────────────────────────────
-export const PLAYER_X = 72;             // fixed horizontal position
-export const PLAYER_WIDTH = 28;
-export const PLAYER_HEIGHT = 36;
-/** y when standing on ground */
-export const PLAYER_GROUND_Y = GROUND_Y - PLAYER_HEIGHT;
+// ─── Towers ───────────────────────────────────────────────────────────────────
+export const TOWER_COSTS = {
+  basic: 50,
+  rapid: 120,
+  sniper: 200,
+  slow: 150
+};
 
-// ─── Physics ──────────────────────────────────────────────────────────────────
-export const GRAVITY = 0.55;
-export const JUMP_VELOCITY = -11.5;
+export const TOWER_STATS = {
+  basic: { range: 120, damage: 10, fireRate: 1.5, color: '#3b82f6' },
+  rapid: { range: 100, damage: 4, fireRate: 5, color: '#f59e0b' },
+  sniper: { range: 250, damage: 40, fireRate: 0.5, color: '#ef4444' },
+  slow: { range: 100, damage: 5, fireRate: 1, color: '#10b981' }
+};
 
-// ─── Bullets ──────────────────────────────────────────────────────────────────
-export const BULLET_WIDTH = 14;
-export const BULLET_HEIGHT = 5;
-export const BULLET_SPEED = 12;         // px per frame, rightward
-export const BULLET_COOLDOWN = 300;     // ms between shots
+// ─── Invaders ─────────────────────────────────────────────────────────────────
+export const INVADER_STATS = {
+  drone: { hp: 20, speed: 2, value: 5, color: '#ef4444', size: 12 },
+  scout: { hp: 10, speed: 4, value: 8, color: '#f59e0b', size: 10 },
+  tank: { hp: 100, speed: 1, value: 20, color: '#10b981', size: 16 },
+  boss: { hp: 500, speed: 0.8, value: 100, color: '#8b5cf6', size: 24 }
+};
 
-// ─── Obstacles ────────────────────────────────────────────────────────────────
-/** Min/max pixel gap between obstacle spawns */
-export const OBSTACLE_GAP_MIN = 260;
-export const OBSTACLE_GAP_MAX = 520;
-
-// jump-only obstacles: barbed wire — cannot be shot
-export const SPIKE_WIDTH = 28;
-export const SPIKE_HEIGHT = 32;
-
-// shoot-1 obstacle: truck
-export const CRATE_WIDTH = 68;
-export const CRATE_HEIGHT = 68;
-
-// shoot-2 obstacle: barrel
-export const BARREL_WIDTH = 28;
-export const BARREL_HEIGHT = 36;
-
-// shoot-3 obstacle: citadel
-export const WALL_WIDTH = 72;
-export const WALL_HEIGHT = 117;
-
-// ─── Background parallax ──────────────────────────────────────────────────────
-export const PARALLAX_FAR_SPEED = 0.15;
-export const PARALLAX_MID_SPEED = 0.45;
-
-// ─── Difficulty ───────────────────────────────────────────────────────────────
-export const INITIAL_SPEED = 3.2;           // px / frame at start
-export const MAX_SPEED = 10;                // px / frame cap
-export const SPEED_RAMP_PER_SECOND = 0.014; // how much speed grows per second
-export const DIFFICULTY_RAMP_INTERVAL = 10; // seconds between difficulty bumps
-
-// ─── Scoring ──────────────────────────────────────────────────────────────────
-export const SCORE_PER_SECOND = 1;          // survival score
-export const SCORE_SHOOT1 = 15;             // destroying 1-hit obstacle
-export const SCORE_SHOOT2 = 30;             // destroying 2-hit obstacle
-export const SCORE_SHOOT3 = 50;             // destroying 3-hit obstacle
-export const SCORE_HIT = 5;                 // partial hit on multi-hp obstacle
-
-// ─── Colors — Mad Max Wasteland ──────────────────────────────────────────────
-export const COLOR_BG_TOP = '#120d09';        // ashen dusk sky
-export const COLOR_BG_BOTTOM = '#2a1b12';     // dusty horizon haze
-export const COLOR_GROUND = '#21150f';        // dry, compacted earth
-export const COLOR_GROUND_LINE = '#3a281c';   // hard-packed surface edge
-export const COLOR_GROUND_CRACK = '#130d09';  // crack details
-export const COLOR_PLAYER = '#9f8b6d';        // sun-bleached gear tone
-export const COLOR_PLAYER_COAT = '#4a3a2d';   // weathered leather coat
-export const COLOR_PLAYER_ACCENT = '#b36a39'; // oxidized copper accent
-export const COLOR_BULLET = '#d8a15b';        // brass projectile
-export const COLOR_BULLET_TRAIL = '#8f5224';  // hot tracer trail
-export const COLOR_SPIKE = '#6d655b';         // rusted wire/metal hazard
-export const COLOR_CRATE = '#6b5a44';         // wrecked truck body rust
-export const COLOR_BARREL = '#7b4f2b';        // old fuel drum
-export const COLOR_WALL = '#514439';          // fortified scrap-concrete
-export const COLOR_HIT_FLASH = '#d4b07a';     // impact spark flash
-export const COLOR_PARTICLE_DUST = '#8b6a4d'; // dust particles
-export const COLOR_SUN = '#d67d42';           // sun through smog
-export const COLOR_MESA = '#2a1d16';          // far mesa silhouette
-export const COLOR_RUIN = '#1a130f';          // distant ruins
+// ���── Colors ──────────────────────────────────────────────────────────────────
+export const COLOR_BG = '#0d0700';
+export const COLOR_PATH = '#1f1610';
+export const COLOR_GRID = '#1a1209';
+export const COLOR_CITADEL = '#f59e0b';
+export const COLOR_RANGE = 'rgba(255, 255, 255, 0.1)';
+export const COLOR_RANGE_INVALID = 'rgba(239, 68, 68, 0.2)';
 
 // ─── Payment / Nostr ─────────────────────────────────────────────────────────
 export const PAYMENT_AMOUNT_SATS = 100;
 export const PAYMENT_RECIPIENT = 'claw@primal.net';
 export const GAME_SCORE_KIND = 1448;
-export const GAME_TAG = 'citadel-run';
+export const GAME_TAG = 'citadel-war';
+

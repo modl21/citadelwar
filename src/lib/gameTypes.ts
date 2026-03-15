@@ -3,38 +3,46 @@ export interface Position {
   y: number;
 }
 
-export interface Player extends Position {
-  width: number;
-  height: number;
-  vy: number; // vertical velocity (for jumping)
-  isGrounded: boolean;
+export type TowerType = 'basic' | 'rapid' | 'sniper' | 'slow';
+export type InvaderType = 'drone' | 'scout' | 'tank' | 'boss';
+
+export interface Tower extends Position {
+  id: string;
+  type: TowerType;
+  range: number;
+  damage: number;
+  fireRate: number; // shots per second
+  cooldown: number; // frames until next shot
+  level: number;
+  active: boolean; // while placing or active
+  angle: number; // turret rotation
+  preview?: boolean; // is this a placement ghost?
+}
+
+export interface Invader extends Position {
+  id: string;
+  type: InvaderType;
+  hp: number;
+  maxHp: number;
+  speed: number;
+  value: number; // score value when destroyed
+  damage: number; // damage to citadel
+  pathIndex: number; // current index in path
+  pathProgress: number; // 0-1 progress to next waypoint
+  frozen: number; // frames frozen/slowed
+  effect: 'none' | 'slowed' | 'burning';
 }
 
 export interface Bullet extends Position {
-  width: number;
-  height: number;
-  active: boolean;
-}
-
-export type ObstacleType = 'jump' | 'shoot1' | 'shoot2' | 'shoot3';
-
-export interface Obstacle extends Position {
-  width: number;
-  height: number;
-  type: ObstacleType;
-  hp: number; // hit points remaining
-  maxHp: number;
-  active: boolean;
-  /** Visual flash timer when hit */
-  hitFlash: number;
-}
-
-export interface Star {
-  x: number;
-  y: number;
-  size: number;
+  id: string;
+  targetId: string; // homing
   speed: number;
-  brightness: number;
+  damage: number;
+  vx: number;
+  vy: number;
+  active: boolean;
+  type: 'basic' | 'laser' | 'missile' | 'slow';
+  color: string;
 }
 
 export interface Particle {
@@ -46,41 +54,43 @@ export interface Particle {
   maxLife: number;
   color: string;
   size: number;
-}
-
-export interface GroundTile {
-  x: number;
-  type: number; // visual variant
+  type: 'spark' | 'smoke' | 'explosion' | 'text';
+  text?: string;
 }
 
 export interface GameState {
-  player: Player;
-  bullets: Bullet[];
-  obstacles: Obstacle[];
-  stars: Star[];
-  particles: Particle[];
-  groundTiles: GroundTile[];
+  citadelHp: number;
+  citadelMaxHp: number;
+  money: number; // resources to build towers (called 'sats' in UI)
   score: number;
-  destroyScore: number; // bonus points from destroying obstacles
-  survivalTime: number; // seconds survived
-  gameSpeed: number; // current scrolling speed (increases over time)
-  speedMultiplier: number; // hazard-based speed penalty multiplier
-  fuelFlashTimer: number; // frames remaining for "10% FASTER" warning flash
-  fuelExplosionTimer: number; // frames remaining for fuel explosion ring effect
-  fuelExplosionX: number; // last fuel explosion center X
-  fuelExplosionY: number; // last fuel explosion center Y
+  wave: number;
+  
+  towers: Tower[];
+  invaders: Invader[];
+  bullets: Bullet[];
+  particles: Particle[];
+  
+  // Game field
+  width: number;
+  height: number;
+  path: Position[]; // Waypoints for invaders to follow
+  
   gameOver: boolean;
-  lastBulletTime: number;
-  screenShake: number;
-  distanceTraveled: number;
-  /** Next obstacle spawn distance threshold */
-  nextObstacleAt: number;
-  /** Difficulty level (increases over time) */
-  difficulty: number;
-  /** Frame counter */
+  gameSpeed: number; // 1x, 2x, etc.
+  
+  // Wave management
+  waveActive: boolean;
+  enemiesToSpawn: InvaderType[]; // Queue of enemies
+  spawnTimer: number; // frames until next spawn
+  
   frame: number;
-  /** Time the game started (performance.now) */
   startTime: number;
+  
+  // Interaction state
+  selectedTowerId: string | null;
+  buildingTowerType: TowerType | null;
+  cursorX: number;
+  cursorY: number;
 }
 
 export type GamePhase = 'idle' | 'paying' | 'ready' | 'playing' | 'gameOver';

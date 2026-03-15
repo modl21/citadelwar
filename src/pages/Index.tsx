@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Zap, Play, Smartphone, Keyboard, Flame } from 'lucide-react';
+import { Zap, Play, Smartphone, Keyboard, Flame, Shield, Swords } from 'lucide-react';
 import type { NSecSigner } from '@nostrify/nostrify';
 
 import { Button } from '@/components/ui/button';
@@ -17,18 +17,18 @@ import type { GameInvoice } from '@/lib/lightning';
 
 const Index = () => {
   useSeoMeta({
-    title: 'Citadel Run - One life. Infinite wasteland.',
-    description: 'One life. Infinite wasteland.',
-    ogTitle: 'Citadel Run',
-    ogDescription: 'One life. Infinite wasteland.',
+    title: 'Citadel War - Defend Your Fortress',
+    description: 'Defend your Citadel from the endless waves of invaders.',
+    ogTitle: 'Citadel War',
+    ogDescription: 'Defend your Citadel from the endless waves of invaders.',
     ogType: 'website',
-    ogSiteName: 'Citadel Run',
-    ogUrl: 'https://citadelrun.com',
-    ogImage: 'https://citadelrun.com/citadelruns.jpg',
+    ogSiteName: 'Citadel War',
+    ogUrl: 'https://citadelwar.com',
+    ogImage: 'https://citadelwar.com/citadelwar.jpg',
     twitterCard: 'summary_large_image',
-    twitterTitle: 'Citadel Run',
-    twitterDescription: 'One life. Infinite wasteland.',
-    twitterImage: 'https://citadelrun.com/citadelruns.jpg',
+    twitterTitle: 'Citadel War',
+    twitterDescription: 'Defend your Citadel from the endless waves of invaders.',
+    twitterImage: 'https://citadelwar.com/citadelwar.jpg',
   });
 
   const isMobile = useIsMobile();
@@ -92,6 +92,8 @@ const Index = () => {
     setShowPayment(true);
   }, []);
 
+  // Removed old effects logic for now, keeping it clean for the new game canvas
+
   return (
     <div className="min-h-full bg-[#0d0700] text-foreground overflow-y-auto">
       {/* Cinematic top glow */}
@@ -111,9 +113,9 @@ const Index = () => {
       <div className="relative z-10 flex flex-col items-center min-h-full px-4 py-6 gap-5">
         <header className="w-full max-w-4xl flex items-center justify-between gap-4 mb-2">
           {/* Citadel Arcade Badge */}
-          <a 
-            href="https://citadelarcade.com" 
-            target="_blank" 
+          <a
+            href="https://citadelarcade.com"
+            target="_blank"
             rel="noopener noreferrer"
             className="transition-transform hover:scale-105 active:scale-95"
           >
@@ -140,15 +142,15 @@ const Index = () => {
         {/* Title */}
         <div className="text-center space-y-2">
           <h1 className="font-pixel text-xl md:text-2xl text-amber-300 tracking-[0.22em] animate-float drop-shadow-[0_0_14px_rgba(245,158,11,0.55)]">
-            CITADEL RUN
+            CITADEL WAR
           </h1>
           <p className="text-xs text-orange-200/70 max-w-xs mx-auto tracking-wide">
-            One life. Infinite wasteland.
+            Defend the fortress. Repel the invaders.
           </p>
         </div>
 
         {/* Game Area */}
-        <div className="relative">
+        <div className="relative w-full max-w-[800px] aspect-[4/3] bg-black rounded-lg shadow-2xl overflow-hidden border border-amber-900/40">
           <GameCanvas
             onGameOver={handleGameOver}
             isPlaying={phase === 'playing'}
@@ -162,20 +164,20 @@ const Index = () => {
                 <div className="flex justify-center">
                   <div className="relative">
                     <div className="size-14 rounded-xl bg-orange-800/30 border border-orange-600/40 flex items-center justify-center animate-float">
-                      <Flame className="size-7 text-amber-400 fill-amber-500/60" />
+                      <Shield className="size-7 text-amber-400 fill-amber-500/60" />
                     </div>
                     <div className="absolute -top-1 -right-1 size-4 bg-amber-500 rounded-full flex items-center justify-center">
-                      <Zap className="size-2.5 text-black fill-black" />
+                      <Swords className="size-2.5 text-black fill-black" />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <p className="font-pixel text-xs text-amber-300 tracking-wider">
-                    100 SATS = 1 LIFE
+                    100 SATS = 1 DEFENSE
                   </p>
                   <p className="text-[10px] text-orange-200/60 max-w-[220px] mx-auto leading-relaxed">
-                    Run the wasteland.
+                    Protect the Citadel at all costs.
                   </p>
                 </div>
 
@@ -192,12 +194,12 @@ const Index = () => {
                   {isMobile ? (
                     <div className="flex items-center gap-1.5">
                       <Smartphone className="size-3" />
-                      <span className="text-[8px] font-pixel">JUMP (left) &middot; FIRE (right)</span>
+                      <span className="text-[8px] font-pixel">TAP TO PLACE TOWERS</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
                       <Keyboard className="size-3" />
-                      <span className="text-[8px] font-pixel">SPACE = JUMP &middot; ENTER = FIRE</span>
+                      <span className="text-[8px] font-pixel">CLICK TO PLACE TOWERS</span>
                     </div>
                   )}
                 </div>
@@ -214,7 +216,7 @@ const Index = () => {
                     SATS RECEIVED
                   </p>
                   <p className="font-pixel text-sm text-amber-300 tracking-wider">
-                    SADDLE UP
+                    PREPARE DEFENSES
                   </p>
                 </div>
 
@@ -223,18 +225,8 @@ const Index = () => {
                   className="bg-amber-500 text-black font-pixel text-sm hover:bg-amber-400 h-14 px-10 shadow-[0_16px_40px_rgba(0,0,0,0.48),0_0_30px_rgba(245,158,11,0.35)] hover:shadow-[0_22px_56px_rgba(0,0,0,0.56),0_0_48px_rgba(245,158,11,0.55)] transition-shadow animate-pulse-glow border border-amber-600/50"
                 >
                   <Play className="size-5 mr-2 fill-current" />
-                  RUN
+                  START WAVE
                 </Button>
-
-                {isMobile ? (
-                  <p className="text-[9px] text-orange-300/40 font-pixel">
-                    JUMP (left) &middot; FIRE (right)
-                  </p>
-                ) : (
-                  <p className="text-[9px] text-orange-300/40 font-pixel">
-                    SPACE = JUMP &middot; ENTER = FIRE
-                  </p>
-                )}
               </div>
             </div>
           )}
@@ -253,31 +245,23 @@ const Index = () => {
         <div className="w-full max-w-lg mx-auto">
           <div className="flex items-center justify-center gap-4 text-[8px] font-pixel text-orange-300/60 flex-wrap">
             <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-end gap-[1px] h-2.5">
-                <span className="w-[2px] h-2 bg-red-600" />
-                <span className="w-[2px] h-2.5 bg-red-500" />
-                <span className="w-[2px] h-2 bg-red-600" />
-              </span>
-              WIRE
+              <span className="inline-block w-2.5 h-2.5 bg-red-600 rounded-[2px]" />
+              INVADERS
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 bg-yellow-800 border border-amber-500/40" />
-              TRUCK (1)
+              <span className="inline-block w-2.5 h-2.5 bg-blue-500 rounded-[2px] border border-blue-400/35" />
+              TOWER
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 bg-orange-800 rounded-[2px] border border-orange-400/35" />
-              FUEL (2) +10% SPD
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 bg-stone-700 border border-orange-200/20" />
-              CITADEL (3)
+              <span className="inline-block w-2.5 h-2.5 bg-amber-500/80 border border-amber-300/20" />
+              CITADEL
             </span>
           </div>
         </div>
 
         {/* Total play count */}
         <p className="text-[9px] font-pixel text-orange-200/35 tracking-wider">
-          TOTAL RUNS {typeof totalPlayCount === 'number' ? totalPlayCount.toLocaleString() : '...'}
+          TOTAL WARS {typeof totalPlayCount === 'number' ? totalPlayCount.toLocaleString() : '...'}
         </p>
 
         {/* Leaderboard */}

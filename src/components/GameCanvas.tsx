@@ -1,21 +1,54 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
-
+import { Shield, Zap, Crosshair, Clock, Play } from 'lucide-react';
 import { createInitialState, updateGame } from '@/lib/gameEngine';
 import { renderGame } from '@/lib/gameRenderer';
 import {
   GAME_WIDTH,
   GAME_HEIGHT,
-  GROUND_Y,
-  SPIKE_WIDTH,
-  SPIKE_HEIGHT,
-  CRATE_WIDTH,
-  CRATE_HEIGHT,
-  BARREL_WIDTH,
-  BARREL_HEIGHT,
-  WALL_WIDTH,
-  WALL_HEIGHT,
+  TOWER_COSTS,
 } from '@/lib/gameConstants';
-import type { GameState } from '@/lib/gameTypes';
+import type { GameState, TowerType } from '@/lib/gameTypes';
+import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
+
+// Helper component for tower buttons
+const TowerSelectButton = ({ 
+  type, 
+  icon: Icon, 
+  label, 
+  cost, 
+  money, 
+  selected, 
+  onClick 
+}: { 
+  type: TowerType, 
+  icon: any, 
+  label: string, 
+  cost: number, 
+  money: number, 
+  selected: boolean, 
+  onClick: () => void 
+}) => {
+  const affordable = money >= cost;
+  
+  return (
+    <button
+        onClick={onClick}
+        disabled={!affordable && !selected}
+        className={cn(
+            "flex flex-col items-center justify-center h-16 w-16 p-1 rounded-md border-2 bg-black/80 transition-all active:scale-95",
+            selected 
+              ? "border-amber-400 bg-amber-900/40 shadow-[0_0_15px_rgba(251,191,36,0.3)] scale-105" 
+              : "border-amber-900/40 hover:border-amber-700/60 hover:bg-black/90",
+            !affordable && !selected && "opacity-40 grayscale cursor-not-allowed border-stone-800"
+        )}
+    >
+        <Icon className={cn("mb-1 w-5 h-5", selected ? "text-amber-400" : "text-amber-200/70")} />
+        <span className={cn("text-[9px] font-pixel leading-tight", selected ? "text-amber-100" : "text-amber-200/50")}>{label}</span>
+        <span className={cn("text-[9px] mt-0.5", affordable ? "text-amber-400" : "text-red-400")}>{cost}⚡</span>
+    </button>
+  );
+};
 
 interface GameCanvasProps {
   onGameOver: (score: number) => void;
@@ -26,92 +59,139 @@ interface GameCanvasProps {
 export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState>(createInitialState(performance.now()));
+  
+  // Game loop references
   const frameRef = useRef(0);
   const animFrameRef = useRef(0);
   const gameOverCalledRef = useRef(false);
+  
+  // UI State (synced from game loop for React renders)
+  const [money, setMoney] = useState(0);
+  const [wave, setWave] = useState(0);
+  const [baseHp, setBaseHp] = useState(0);
+  const [selectedTowerType, setSelectedTowerType] = useState<TowerType | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
-
-  // Input refs
-  const jumpRef = useRef(false);
-  const shootRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Canvas scaling ──────────────────────────────────────────────────────────
   useEffect(() => {
     function handleResize() {
-      const maxW = Math.min(window.innerWidth - 16, 640);
-      const maxH = window.innerHeight - 200;
-      const scaleW = maxW / GAME_WIDTH;
-      const scaleH = maxH / GAME_HEIGHT;
-      setCanvasScale(Math.min(scaleW, scaleH, 1.5));
+      if (!containerRef.current) return;
+      const containerWidth = containerRef.current.clientWidth;
+      // Calculate scale to fit width, max 1.5x
+      const scale = Math.min(containerWidth / GAME_WIDTH, 1.2);
+       setCanvasScale(scale);
     }
+    
+    // Initial size
     handleResize();
+    
+    // Resize observer
+    const observer = new ResizeObserver(handleResize);
+    if (containerRef.current) observer.observe(containerRef.current);
+    
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+    };
   }, []);
 
   // ── Reset game when starting ─────────────────────────────────────────────────
   useEffect(() => {
-    gameStateRef.current = createInitialState(performance.now());
-    gameOverCalledRef.current = false;
-    jumpRef.current = false;
-    shootRef.current = false;
+    if (isPlaying) {
+      gameStateRef.current = createInitialState(performance.now());
+      // Start with wave 1 ready
+      gameStateRef.current.spawnTimer = -1; 
+      gameStateRef.current.money = 150; 
+      
+      setMoney(150);
+      setWave(1);
+      setBaseHp(20);
+      
+      gameOverCalledRef.current = false;
+      setSelectedTowerType(null);
+    }
   }, [isPlaying]);
 
-  // ── Desktop Keyboard Controls ───────────────────────────────────────────────
-  // Space = Jump, Enter = Shoot
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === ' ' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        jumpRef.current = true;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        shootRef.current = true;
-      }
-    }
-
-    function handleKeyUp(e: KeyboardEvent) {
-      if (e.key === ' ' || e.key === 'ArrowUp') {
-        jumpRef.current = false;
-      }
-      if (e.key === 'Enter') {
-        shootRef.current = false;
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+  // ── Input Handling ───────────────────────────────────────────────────────────
+  const getCanvasCoordinates = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = GAME_WIDTH / rect.width;
+    const scaleY = GAME_HEIGHT / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
-  }, [isPlaying]);
+  };
 
-  // ── Mobile Touch Controls ───────────────────────────────────────────────────
-  const handleTouchStartJump = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    jumpRef.current = true;
-  }, []);
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isPlaying) return;
+    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
+    
+    // Update raw game state cursor for engine use
+    gameStateRef.current.cursorX = x;
+    gameStateRef.current.cursorY = y;
+    
+    // Set preview type
+    gameStateRef.current.buildingTowerType = selectedTowerType;
+    
+  }, [isPlaying, selectedTowerType]);
 
-  const handleTouchEndJump = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    jumpRef.current = false;
-  }, []);
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!isPlaying) return;
+    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
+    
+    if (selectedTowerType) {
+        // Place Tower via Input Event to Update Logic
+        const cost = TOWER_COSTS[selectedTowerType];
+        
+        // Manual check quickly before engine update to give instant UI feedback if needed
+        if (gameStateRef.current.money >= cost) {
+             // Pass intent to engine
+             // In a clearer pattern, we queue inputs, but direct state update is fine for this scale
+             const nextState = updateGame(gameStateRef.current, {
+                 placeTower: { type: selectedTowerType, x, y }
+             }, performance.now());
+             
+             gameStateRef.current = nextState;
+             
+             // Sync UI
+             setMoney(nextState.money);
+             
+             // Deselect after placement (optional, maybe keep selected for rapid placement?)
+             // For now, let's keep selected for rapid placement
+             // If money runs out, the button disabled state handles visual feedback
+        }
+    } else {
+        // Select tower on map logic
+        // TODO: Selection and upgrade UI
+    }
+  }, [isPlaying, selectedTowerType]);
+  
+  // Mobile Tap
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+      if (!isPlaying || !selectedTowerType) return;
+      // Prevent scrolling
+      // e.preventDefault(); 
+      
+      const touch = e.touches[0];
+      const { x, y } = getCanvasCoordinates(touch.clientX, touch.clientY);
+      
+      const cost = TOWER_COSTS[selectedTowerType];
+      if (gameStateRef.current.money >= cost) {
+         const nextState = updateGame(gameStateRef.current, {
+             placeTower: { type: selectedTowerType, x, y }
+         }, performance.now());
+         gameStateRef.current = nextState;
+         setMoney(nextState.money);
+      }
+  }, [isPlaying, selectedTowerType]);
 
-  const handleTouchStartShoot = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    shootRef.current = true;
-  }, []);
 
-  const handleTouchEndShoot = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    shootRef.current = false;
-  }, []);
-
-  // ── Game loop ───────────────────────────────────────────────────────────────
+  // ── Game Loop ────────────────────────────────────────────────────────────────
   const gameLoop = useCallback(() => {
     if (!isPlaying) return;
 
@@ -121,151 +201,134 @@ export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps)
     if (!ctx) return;
 
     const now = performance.now();
-    const state = gameStateRef.current;
+    let state = gameStateRef.current; // mutable ref access
 
     if (!state.gameOver) {
-      gameStateRef.current = updateGame(
+      // Run Update Logic
+      state = updateGame(
         state,
-        { jump: jumpRef.current, shoot: shootRef.current },
+        { // Inputs
+            cursor: { x: state.cursorX, y: state.cursorY }
+        },
         now,
       );
+      gameStateRef.current = state;
+      
+      // Sync vital UI stats occasionally (every 10 frames? or just every frame, simple enough)
+      // optimizing react renders:
+      if (frameRef.current % 5 === 0) {
+          if (state.money !== money) setMoney(state.money);
+          if (state.wave !== wave) setWave(state.wave);
+          if (Math.ceil(state.citadelHp) !== baseHp) setBaseHp(Math.ceil(state.citadelHp));
+      }
+      
     } else if (!gameOverCalledRef.current) {
       gameOverCalledRef.current = true;
       onGameOver(state.score);
     }
 
     frameRef.current++;
-    renderGame(ctx, gameStateRef.current, frameRef.current);
+    renderGame(ctx, state, frameRef.current);
 
     animFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [isPlaying, onGameOver]);
+  }, [isPlaying, onGameOver, money, wave, baseHp]); // deps ensuring closure freshness if needed
 
   useEffect(() => {
     if (isPlaying) {
       animFrameRef.current = requestAnimationFrame(gameLoop);
     }
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, [isPlaying, gameLoop]);
 
-  // ── Idle animation when not playing ─────────────────────────────────────────
-  useEffect(() => {
-    if (isPlaying) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let frame = 0;
-    let idleState = createInitialState(performance.now());
-    // Spawn some obstacles for visual interest
-    idleState.obstacles = [
-      { x: 140, y: GROUND_Y - SPIKE_HEIGHT, width: SPIKE_WIDTH, height: SPIKE_HEIGHT, type: 'jump', hp: 999, maxHp: 999, active: true, hitFlash: 0 },
-      { x: 200, y: GROUND_Y - CRATE_HEIGHT, width: CRATE_WIDTH, height: CRATE_HEIGHT, type: 'shoot1', hp: 1, maxHp: 1, active: true, hitFlash: 0 },
-      { x: 330, y: GROUND_Y - BARREL_HEIGHT, width: BARREL_WIDTH, height: BARREL_HEIGHT, type: 'shoot2', hp: 2, maxHp: 2, active: true, hitFlash: 0 },
-      { x: 390, y: GROUND_Y - WALL_HEIGHT, width: WALL_WIDTH, height: WALL_HEIGHT, type: 'shoot3', hp: 3, maxHp: 3, active: true, hitFlash: 0 },
-    ];
-
-    let idleAnimFrame: number;
-
-    function animateIdle() {
-      frame++;
-      // Slow scroll
-      idleState = {
-        ...idleState,
-        stars: idleState.stars.map((s) => {
-          let nx = s.x - s.speed * 1.5;
-          if (nx < -2) nx += GAME_WIDTH + 4;
-          return { ...s, x: nx };
-        }),
-        distanceTraveled: idleState.distanceTraveled + 0.5,
-        obstacles: idleState.obstacles.map((o) => {
-          let nx = o.x - 0.5;
-          if (nx < -40) nx += GAME_WIDTH + 80;
-          return { ...o, x: nx };
-        }),
-        groundTiles: idleState.groundTiles.map((t) => {
-          let nx = t.x - 0.5;
-          if (nx < -40) nx += GAME_WIDTH + 80;
-          return { ...t, x: nx };
-        }),
-        frame,
-        survivalTime: 0,
-        gameSpeed: 1.5,
-        speedMultiplier: 1,
-        fuelFlashTimer: 0,
-        fuelExplosionTimer: 0,
-        fuelExplosionX: 0,
-        fuelExplosionY: 0,
-      };
-      renderGame(ctx!, idleState, frame);
-      idleAnimFrame = requestAnimationFrame(animateIdle);
-    }
-
-    idleAnimFrame = requestAnimationFrame(animateIdle);
-    return () => cancelAnimationFrame(idleAnimFrame);
-  }, [isPlaying]);
-
+  // ── Rendering Controls ───────────────────────────────────────────────────────
   return (
-    <div className="relative">
-      <canvas
-        ref={canvasRef}
-        width={GAME_WIDTH}
-        height={GAME_HEIGHT}
-        className="game-canvas rounded-lg border border-amber-700/55 shadow-[0_18px_60px_rgba(8,6,4,0.55),0_0_42px_rgba(179,106,57,0.18)]"
-        style={{
-          width: GAME_WIDTH * canvasScale,
-          height: GAME_HEIGHT * canvasScale,
-          imageRendering: 'pixelated'
+    <div className="flex flex-col items-center w-full max-w-4xl" ref={containerRef}>
+      
+      {/* Game Viewport */}
+      <div 
+        className="relative overflow-hidden rounded-lg border border-amber-900/60 shadow-2xl bg-[#050301]"
+        style={{ 
+            width: GAME_WIDTH * canvasScale, 
+            height: GAME_HEIGHT * canvasScale,
+            maxHeight: '70vh'
         }}
-      />
+      >
+          <canvas
+            ref={canvasRef}
+            width={GAME_WIDTH}
+            height={GAME_HEIGHT}
+            className="w-full h-full cursor-crosshair touch-none"
+            style={{ imageRendering: 'pixelated' }}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleClick}
+            onTouchStart={handleTouchStart}
+          />
+          
+          {/* Overlay UI for stats if we want them cleaner than canvas text */}
+          {isPlaying && (
+              <div className="absolute top-2 left-2 flex gap-4 pointer-events-none">
+                  <div className="bg-black/60 px-3 py-1 rounded border border-amber-900/30 text-xs font-pixel text-amber-500">
+                      SATS: <span className="text-white">{money}</span>
+                  </div>
+                  <div className="bg-black/60 px-3 py-1 rounded border border-amber-900/30 text-xs font-pixel text-red-500">
+                      HP: <span className="text-white">{baseHp}</span>
+                  </div>
+                  <div className="bg-black/60 px-3 py-1 rounded border border-amber-900/30 text-xs font-pixel text-blue-400">
+                      WAVE: <span className="text-white">{wave}</span>
+                  </div>
+              </div>
+          )}
+      </div>
 
-      {/* Mobile Controls Under-Canvas */}
-      {isPlaying && isMobile && (
-        <div className="mt-3 grid grid-cols-2 gap-2 touch-none select-none">
-          <button
-            type="button"
-            aria-label="Jump"
-            className="h-14 rounded-lg border border-amber-300/35 bg-amber-500/16 active:bg-amber-500/28 text-amber-100/90 font-pixel text-[10px] tracking-wider shadow-[0_8px_20px_rgba(0,0,0,0.28)] transition-colors"
-            onTouchStart={handleTouchStartJump}
-            onTouchEnd={handleTouchEndJump}
-            onTouchCancel={handleTouchEndJump}
-            onMouseDown={handleTouchStartJump}
-            onMouseUp={handleTouchEndJump}
-            onMouseLeave={handleTouchEndJump}
-          >
-            JUMP
-          </button>
-
-          <button
-            type="button"
-            aria-label="Fire"
-            className="h-14 rounded-lg border border-red-300/35 bg-red-500/16 active:bg-red-500/28 text-red-100/90 font-pixel text-[10px] tracking-wider shadow-[0_8px_20px_rgba(0,0,0,0.28)] transition-colors"
-            onTouchStart={handleTouchStartShoot}
-            onTouchEnd={handleTouchEndShoot}
-            onTouchCancel={handleTouchEndShoot}
-            onMouseDown={handleTouchStartShoot}
-            onMouseUp={handleTouchEndShoot}
-            onMouseLeave={handleTouchEndShoot}
-          >
-            FIRE
-          </button>
-
-          <div className="col-span-2 text-center text-[8px] font-pixel text-orange-200/45 pt-0.5">
-            TAP BELOW THE SCREEN TO PLAY
-          </div>
+      {/* Control Bar */}
+      {isPlaying && (
+        <div className="mt-4 w-full flex flex-wrap justify-center gap-3 p-3 bg-black/60 backdrop-blur-md rounded-xl border border-amber-900/40 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+             <TowerSelectButton 
+                type="basic" icon={Shield} label="TURRET" cost={TOWER_COSTS.basic} 
+                money={money} selected={selectedTowerType === 'basic'} 
+                onClick={() => setSelectedTowerType(prev => prev === 'basic' ? null : 'basic')} 
+             />
+             <TowerSelectButton 
+                type="rapid" icon={Zap} label="RAPID" cost={TOWER_COSTS.rapid} 
+                money={money} selected={selectedTowerType === 'rapid'} 
+                onClick={() => setSelectedTowerType(prev => prev === 'rapid' ? null : 'rapid')} 
+             />
+             <TowerSelectButton 
+                type="sniper" icon={Crosshair} label="SNIPER" cost={TOWER_COSTS.sniper} 
+                money={money} selected={selectedTowerType === 'sniper'} 
+                onClick={() => setSelectedTowerType(prev => prev === 'sniper' ? null : 'sniper')} 
+             />
+             <TowerSelectButton 
+                type="slow" icon={Clock} label="FREEZE" cost={TOWER_COSTS.slow} 
+                money={money} selected={selectedTowerType === 'slow'} 
+                onClick={() => setSelectedTowerType(prev => prev === 'slow' ? null : 'slow')} 
+             />
+             
+             {/* Dynamic hint area */}
+             <div className="hidden sm:flex flex-col justify-center ml-4 px-4 border-l border-white/10 text-xs text-amber-200/60 font-pixel min-w-[140px]">
+                 {selectedTowerType ? (
+                     <>
+                        <span className="text-amber-400 uppercase">{selectedTowerType} TOWER SELECTED</span>
+                        <span className="text-[10px] opacity-60">CLICK MAP TO BUILD</span>
+                     </>
+                 ) : (
+                     <>
+                        <span>SELECT TOWER</span>
+                        <span className="text-[10px] opacity-60">BUILD DEFENSES</span>
+                     </>
+                 )}
+             </div>
         </div>
       )}
-
-      {/* Desktop hint */}
-      {isPlaying && !isMobile && (
-        <div className="absolute top-2 w-full text-center pointer-events-none text-amber-200/40 text-[10px] hidden sm:block">
-          SPACE to Jump &bull; ENTER to Fire
-        </div>
+      
+      {/* Mobile Hint */}
+      {isMobile && isPlaying && selectedTowerType && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 text-amber-400 px-4 py-2 rounded-full text-xs font-bold border border-amber-500/50 shadow-lg animate-pulse pointer-events-none">
+              TAP TO BUILD
+          </div>
       )}
     </div>
   );
