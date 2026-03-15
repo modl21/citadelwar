@@ -1,54 +1,59 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Shield, Zap, Crosshair, Clock } from 'lucide-react';
-import { createInitialState, updateGame } from '@/lib/gameEngine';
+import { createInitialState, updateGame, canPlaceTower } from '@/lib/gameEngine';
 import { renderGame } from '@/lib/gameRenderer';
-import {
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  TOWER_COSTS,
-} from '@/lib/gameConstants';
+import { GAME_WIDTH, GAME_HEIGHT, TOWER_COSTS, TOWER_STATS } from '@/lib/gameConstants';
 import type { GameState, TowerType } from '@/lib/gameTypes';
-import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
-// Helper component for tower buttons
-const TowerSelectButton = ({ 
-  type, 
-  icon: Icon, 
-  label, 
-  cost, 
-  money, 
-  selected, 
-  onClick 
-}: { 
-  type: TowerType, 
-  icon: any, 
-  label: string, 
-  cost: number, 
-  money: number, 
-  selected: boolean, 
-  onClick: () => void 
-}) => {
+// ─── Tower select button ─────────────────────────────────────────────────────
+
+const TOWER_ICONS: Record<TowerType, typeof Shield> = {
+  basic: Shield,
+  rapid: Zap,
+  sniper: Crosshair,
+  slow: Clock,
+};
+
+const TOWER_LABELS: Record<TowerType, string> = {
+  basic: 'TURRET',
+  rapid: 'RAPID',
+  sniper: 'SNIPER',
+  slow: 'FREEZE',
+};
+
+function TowerBtn({ type, money, selected, onSelect }: {
+  type: TowerType; money: number; selected: boolean; onSelect: () => void;
+}) {
+  const Icon = TOWER_ICONS[type];
+  const cost = TOWER_COSTS[type];
   const affordable = money >= cost;
-  
+
   return (
     <button
-        onClick={onClick}
-        disabled={!affordable && !selected}
-        className={cn(
-            "flex flex-col items-center justify-center h-16 w-16 p-1 rounded-md border-2 bg-black/80 transition-all active:scale-95",
-            selected 
-              ? "border-amber-400 bg-amber-900/40 shadow-[0_0_15px_rgba(251,191,36,0.3)] scale-105" 
-              : "border-amber-900/40 hover:border-amber-700/60 hover:bg-black/90",
-            !affordable && !selected && "opacity-40 grayscale cursor-not-allowed border-stone-800"
-        )}
+      onClick={onSelect}
+      disabled={!affordable && !selected}
+      className={cn(
+        'flex flex-col items-center justify-center rounded-lg border-2 transition-all active:scale-95 select-none',
+        'h-[52px] w-[52px] sm:h-16 sm:w-16 p-0.5 sm:p-1',
+        selected
+          ? 'border-amber-400 bg-amber-900/50 shadow-[0_0_12px_rgba(251,191,36,0.35)] scale-105'
+          : 'border-amber-900/40 bg-black/80 hover:border-amber-700/60',
+        !affordable && !selected && 'opacity-35 grayscale pointer-events-none',
+      )}
     >
-        <Icon className={cn("mb-1 w-5 h-5", selected ? "text-amber-400" : "text-amber-200/70")} />
-        <span className={cn("text-[9px] font-pixel leading-tight", selected ? "text-amber-100" : "text-amber-200/50")}>{label}</span>
-        <span className={cn("text-[9px] mt-0.5", affordable ? "text-amber-400" : "text-red-400")}>{cost}⚡</span>
+      <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', selected ? 'text-amber-400' : 'text-amber-200/70')} />
+      <span className={cn('text-[7px] sm:text-[9px] font-pixel leading-none mt-0.5', selected ? 'text-amber-100' : 'text-amber-200/50')}>
+        {TOWER_LABELS[type]}
+      </span>
+      <span className={cn('text-[7px] sm:text-[9px] mt-0.5', affordable ? 'text-amber-400' : 'text-red-400')}>
+        {cost}⚡
+      </span>
     </button>
   );
-};
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 
 interface GameCanvasProps {
   onGameOver: (score: number) => void;
@@ -58,277 +63,199 @@ interface GameCanvasProps {
 
 export function GameCanvas({ onGameOver, isPlaying, isMobile }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameStateRef = useRef<GameState>(createInitialState(performance.now()));
-  
-  // Game loop references
+  const stateRef = useRef<GameState>(createInitialState(performance.now()));
   const frameRef = useRef(0);
-  const animFrameRef = useRef(0);
-  const gameOverCalledRef = useRef(false);
-  
-  // UI State (synced from game loop for React renders)
-  const [money, setMoney] = useState(0);
-  const [wave, setWave] = useState(0);
-  const [baseHp, setBaseHp] = useState(0);
-  const [selectedTowerType, setSelectedTowerType] = useState<TowerType | null>(null);
-  const [canvasScale, setCanvasScale] = useState(1);
+  const animRef = useRef(0);
+  const gameOverFiredRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ── Canvas scaling ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    function handleResize() {
-      if (!containerRef.current) return;
-      const containerWidth = containerRef.current.clientWidth;
-      // Calculate scale to fit width, max 1.5x
-      const scale = Math.min(containerWidth / GAME_WIDTH, 1.2);
-       setCanvasScale(scale);
-    }
-    
-    // Initial size
-    handleResize();
-    
-    // Resize observer
-    const observer = new ResizeObserver(handleResize);
-    if (containerRef.current) observer.observe(containerRef.current);
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      observer.disconnect();
+  // React state for UI
+  const [money, setMoney] = useState(0);
+  const [wave, setWave] = useState(0);
+  const [hp, setHp] = useState(0);
+  const [score, setScore] = useState(0);
+  const [selected, setSelected] = useState<TowerType | null>(null);
+
+  // ── Coordinate mapping ──────────────────────────────────────────────────
+  const toGameCoords = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: -100, y: -100 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * GAME_WIDTH,
+      y: ((clientY - rect.top) / rect.height) * GAME_HEIGHT,
     };
   }, []);
 
-  // ── Reset game when starting ─────────────────────────────────────────────────
+  // ── Reset on play ───────────────────────────────────────────────────────
   useEffect(() => {
     if (isPlaying) {
-      gameStateRef.current = createInitialState(performance.now());
-      // Start with wave 1 ready
-      gameStateRef.current.spawnTimer = -1; 
-      gameStateRef.current.money = 150; 
-      
-      setMoney(150);
-      setWave(1);
-      setBaseHp(20);
-      
-      gameOverCalledRef.current = false;
-      setSelectedTowerType(null);
+      stateRef.current = createInitialState(performance.now());
+      gameOverFiredRef.current = false;
+      setSelected(null);
+      setMoney(stateRef.current.money);
+      setWave(0);
+      setHp(stateRef.current.citadelHp);
+      setScore(0);
     }
   }, [isPlaying]);
 
-  // ── Input Handling ───────────────────────────────────────────────────────────
-  const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = GAME_WIDTH / rect.width;
-    const scaleY = GAME_HEIGHT / rect.height;
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
-    };
-  };
+  // ── Sync selected tower type into game state ────────────────────────────
+  useEffect(() => {
+    stateRef.current.buildingTowerType = selected;
+  }, [selected]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  // ── Mouse move → cursor position ────────────────────────────────────────
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isPlaying) return;
-    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
-    
-    // Update raw game state cursor for engine use
-    gameStateRef.current.cursorX = x;
-    gameStateRef.current.cursorY = y;
-    
-    // Set preview type
-    gameStateRef.current.buildingTowerType = selectedTowerType;
-    
-  }, [isPlaying, selectedTowerType]);
+    const { x, y } = toGameCoords(e.clientX, e.clientY);
+    stateRef.current.cursorX = x;
+    stateRef.current.cursorY = y;
+  }, [isPlaying, toGameCoords]);
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (!isPlaying) return;
-    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
-    
-    if (selectedTowerType) {
-        // Place Tower via Input Event to Update Logic
-        const cost = TOWER_COSTS[selectedTowerType];
-        
-        // Manual check quickly before engine update to give instant UI feedback if needed
-        if (gameStateRef.current.money >= cost) {
-             // Pass intent to engine
-             // In a clearer pattern, we queue inputs, but direct state update is fine for this scale
-             const nextState = updateGame(gameStateRef.current, {
-                 placeTower: { type: selectedTowerType, x, y }
-             }, performance.now());
-             
-             gameStateRef.current = nextState;
-             
-             // Sync UI
-             setMoney(nextState.money);
-             
-             // Deselect after placement (optional, maybe keep selected for rapid placement?)
-             // For now, let's keep selected for rapid placement
-             // If money runs out, the button disabled state handles visual feedback
-        }
-    } else {
-        // Select tower on map logic
-        // TODO: Selection and upgrade UI
+  // ── Click / tap → place tower ───────────────────────────────────────────
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!isPlaying || !selected) return;
+    e.preventDefault();
+
+    const { x, y } = toGameCoords(e.clientX, e.clientY);
+
+    if (stateRef.current.money >= TOWER_COSTS[selected] && canPlaceTower(x, y, stateRef.current)) {
+      stateRef.current = updateGame(stateRef.current, { placeTower: { type: selected, x, y } });
+      setMoney(stateRef.current.money);
     }
-  }, [isPlaying, selectedTowerType]);
-  
-  // Mobile Tap
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-      if (!isPlaying || !selectedTowerType) return;
-      // Prevent scrolling
-      // e.preventDefault(); 
-      
-      const touch = e.touches[0];
-      const { x, y } = getCanvasCoordinates(touch.clientX, touch.clientY);
-      
-      const cost = TOWER_COSTS[selectedTowerType];
-      if (gameStateRef.current.money >= cost) {
-         const nextState = updateGame(gameStateRef.current, {
-             placeTower: { type: selectedTowerType, x, y }
-         }, performance.now());
-         gameStateRef.current = nextState;
-         setMoney(nextState.money);
-      }
-  }, [isPlaying, selectedTowerType]);
+  }, [isPlaying, selected, toGameCoords]);
 
-
-  // ── Game Loop ────────────────────────────────────────────────────────────────
-  const gameLoop = useCallback(() => {
+  // ── Game loop ───────────────────────────────────────────────────────────
+  const loop = useCallback(() => {
     if (!isPlaying) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const now = performance.now();
-    let state = gameStateRef.current; // mutable ref access
+    let s = stateRef.current;
 
-    if (!state.gameOver) {
-      // Run Update Logic
-      state = updateGame(
-        state,
-        { // Inputs
-            cursor: { x: state.cursorX, y: state.cursorY }
-        },
-        now,
-      );
-      gameStateRef.current = state;
-      
-      // Sync vital UI stats occasionally (every 10 frames? or just every frame, simple enough)
-      // optimizing react renders:
-      if (frameRef.current % 5 === 0) {
-          if (state.money !== money) setMoney(state.money);
-          if (state.wave !== wave) setWave(state.wave);
-          if (Math.ceil(state.citadelHp) !== baseHp) setBaseHp(Math.ceil(state.citadelHp));
+    if (!s.gameOver) {
+      s = updateGame(s, {});
+      stateRef.current = s;
+
+      // Sync UI every few frames
+      if (frameRef.current % 6 === 0) {
+        setMoney(s.money);
+        setWave(s.wave);
+        setHp(Math.ceil(s.citadelHp));
+        setScore(s.score);
       }
-      
-    } else if (!gameOverCalledRef.current) {
-      gameOverCalledRef.current = true;
-      onGameOver(state.score);
+    } else if (!gameOverFiredRef.current) {
+      gameOverFiredRef.current = true;
+      setMoney(s.money);
+      setWave(s.wave);
+      setHp(0);
+      setScore(s.score);
+      onGameOver(s.score);
     }
 
     frameRef.current++;
-    renderGame(ctx, state, frameRef.current);
-
-    animFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [isPlaying, onGameOver, money, wave, baseHp]); // deps ensuring closure freshness if needed
+    renderGame(ctx, s, frameRef.current);
+    animRef.current = requestAnimationFrame(loop);
+  }, [isPlaying, onGameOver]);
 
   useEffect(() => {
     if (isPlaying) {
-      animFrameRef.current = requestAnimationFrame(gameLoop);
+      frameRef.current = 0;
+      animRef.current = requestAnimationFrame(loop);
     }
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
-  }, [isPlaying, gameLoop]);
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [isPlaying, loop]);
 
+  // ── Idle render (static preview) ────────────────────────────────────────
+  useEffect(() => {
+    if (isPlaying) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  // ── Rendering Controls ───────────────────────────────────────────────────────
+    let frame = 0;
+    let idleAnim: number;
+    const idleState = createInitialState(performance.now());
+
+    function drawIdle() {
+      frame++;
+      renderGame(ctx!, idleState, frame);
+      idleAnim = requestAnimationFrame(drawIdle);
+    }
+    idleAnim = requestAnimationFrame(drawIdle);
+    return () => cancelAnimationFrame(idleAnim);
+  }, [isPlaying]);
+
+  // ─── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center w-full max-w-4xl" ref={containerRef}>
-      
-      {/* Game Viewport */}
-      <div 
-        className="relative overflow-hidden rounded-lg border border-amber-900/60 shadow-2xl bg-[#050301]"
-        style={{ 
-            width: GAME_WIDTH * canvasScale, 
-            height: GAME_HEIGHT * canvasScale,
-            maxHeight: '70vh'
-        }}
-      >
-          <canvas
-            ref={canvasRef}
-            width={GAME_WIDTH}
-            height={GAME_HEIGHT}
-            className="w-full h-full cursor-crosshair touch-none"
-            style={{ imageRendering: 'pixelated' }}
-            onMouseMove={handleMouseMove}
-            onMouseDown={handleClick}
-            onTouchStart={handleTouchStart}
-          />
-          
-          {/* Overlay UI for stats if we want them cleaner than canvas text */}
-          {isPlaying && (
-              <div className="absolute top-2 left-2 flex gap-4 pointer-events-none">
-                  <div className="bg-black/60 px-3 py-1 rounded border border-amber-900/30 text-xs font-pixel text-amber-500">
-                      SATS: <span className="text-white">{money}</span>
-                  </div>
-                  <div className="bg-black/60 px-3 py-1 rounded border border-amber-900/30 text-xs font-pixel text-red-500">
-                      HP: <span className="text-white">{baseHp}</span>
-                  </div>
-                  <div className="bg-black/60 px-3 py-1 rounded border border-amber-900/30 text-xs font-pixel text-blue-400">
-                      WAVE: <span className="text-white">{wave}</span>
-                  </div>
-              </div>
+    <div className="flex flex-col items-center w-full" ref={containerRef}>
+      {/* Canvas viewport — scales via CSS to fill width */}
+      <div className="relative w-full" style={{ maxWidth: GAME_WIDTH, aspectRatio: `${GAME_WIDTH}/${GAME_HEIGHT}` }}>
+        <canvas
+          ref={canvasRef}
+          width={GAME_WIDTH}
+          height={GAME_HEIGHT}
+          className={cn(
+            'w-full h-full rounded-lg border border-amber-900/50 shadow-[0_8px_40px_rgba(0,0,0,0.6)] touch-none',
+            selected ? 'cursor-crosshair' : 'cursor-default',
           )}
+          style={{ imageRendering: 'pixelated' }}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        />
+
+        {/* HUD overlay (HTML for crisp text at any scale) */}
+        {isPlaying && (
+          <div className="absolute top-1.5 left-1.5 right-1.5 flex items-start justify-between pointer-events-none">
+            <div className="flex gap-1.5 sm:gap-2">
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-amber-400 border border-amber-900/30">
+                ⚡{money}
+              </span>
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-red-400 border border-amber-900/30">
+                ❤{hp}
+              </span>
+            </div>
+            <div className="flex gap-1.5 sm:gap-2">
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-blue-400 border border-amber-900/30">
+                W{wave}
+              </span>
+              <span className="bg-black/70 px-2 py-0.5 rounded text-[10px] sm:text-xs font-pixel text-white border border-amber-900/30">
+                {score}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Control Bar */}
+      {/* Tower selection bar */}
       {isPlaying && (
-        <div className="mt-4 w-full flex flex-wrap justify-center gap-3 p-3 bg-black/60 backdrop-blur-md rounded-xl border border-amber-900/40 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-             <TowerSelectButton 
-                type="basic" icon={Shield} label="TURRET" cost={TOWER_COSTS.basic} 
-                money={money} selected={selectedTowerType === 'basic'} 
-                onClick={() => setSelectedTowerType(prev => prev === 'basic' ? null : 'basic')} 
-             />
-             <TowerSelectButton 
-                type="rapid" icon={Zap} label="RAPID" cost={TOWER_COSTS.rapid} 
-                money={money} selected={selectedTowerType === 'rapid'} 
-                onClick={() => setSelectedTowerType(prev => prev === 'rapid' ? null : 'rapid')} 
-             />
-             <TowerSelectButton 
-                type="sniper" icon={Crosshair} label="SNIPER" cost={TOWER_COSTS.sniper} 
-                money={money} selected={selectedTowerType === 'sniper'} 
-                onClick={() => setSelectedTowerType(prev => prev === 'sniper' ? null : 'sniper')} 
-             />
-             <TowerSelectButton 
-                type="slow" icon={Clock} label="FREEZE" cost={TOWER_COSTS.slow} 
-                money={money} selected={selectedTowerType === 'slow'} 
-                onClick={() => setSelectedTowerType(prev => prev === 'slow' ? null : 'slow')} 
-             />
-             
-             {/* Dynamic hint area */}
-             <div className="hidden sm:flex flex-col justify-center ml-4 px-4 border-l border-white/10 text-xs text-amber-200/60 font-pixel min-w-[140px]">
-                 {selectedTowerType ? (
-                     <>
-                        <span className="text-amber-400 uppercase">{selectedTowerType} TOWER SELECTED</span>
-                        <span className="text-[10px] opacity-60">CLICK MAP TO BUILD</span>
-                     </>
-                 ) : (
-                     <>
-                        <span>SELECT TOWER</span>
-                        <span className="text-[10px] opacity-60">BUILD DEFENSES</span>
-                     </>
-                 )}
-             </div>
-        </div>
-      )}
-      
-      {/* Mobile Hint */}
-      {isMobile && isPlaying && selectedTowerType && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 text-amber-400 px-4 py-2 rounded-full text-xs font-bold border border-amber-500/50 shadow-lg animate-pulse pointer-events-none">
-              TAP TO BUILD
+        <div className="mt-3 w-full max-w-md flex items-center justify-center gap-2 sm:gap-3 px-3 py-2 sm:py-3 bg-black/70 backdrop-blur rounded-xl border border-amber-900/40">
+          {(['basic', 'rapid', 'sniper', 'slow'] as TowerType[]).map((t) => (
+            <TowerBtn
+              key={t}
+              type={t}
+              money={money}
+              selected={selected === t}
+              onSelect={() => setSelected(prev => prev === t ? null : t)}
+            />
+          ))}
+
+          {/* Hint */}
+          <div className="hidden sm:block ml-3 pl-3 border-l border-white/10 text-[10px] font-pixel text-amber-200/50 leading-snug min-w-[100px]">
+            {selected ? (
+              <>
+                <div className="text-amber-400 uppercase">{selected}</div>
+                <div>{isMobile ? 'TAP' : 'CLICK'} TO BUILD</div>
+              </>
+            ) : (
+              <div>SELECT A TOWER</div>
+            )}
           </div>
+        </div>
       )}
     </div>
   );

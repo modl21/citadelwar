@@ -12,52 +12,115 @@ import {
   GAME_HEIGHT,
   INITIAL_LIVES,
   INITIAL_MONEY,
-  WAVE_DELAY,
+  WAVE_COUNTDOWN,
   SPAWN_DELAY,
+  PATH_WIDTH,
   TOWER_COSTS,
   TOWER_STATS,
   INVADER_STATS,
-  COLOR_CITADEL,
+  TOWER_SIZE,
 } from '@/lib/gameConstants';
 
-// ─── Path Definition ────────────────────────────────────────────────────────
-// Simple winding path for now
+// ─── Path ────────────────────────────────────────────────────────────────────
 const PATH: Position[] = [
-  { x: 0, y: 100 },
-  { x: 200, y: 100 },
-  { x: 200, y: 300 },
-  { x: 400, y: 300 },
-  { x: 400, y: 150 },
-  { x: 600, y: 150 },
-  { x: 600, y: 450 },
-  { x: 100, y: 450 },
-  { x: 100, y: 550 },
-  { x: 800, y: 550 },
+  { x: -20, y: 80 },
+  { x: 160, y: 80 },
+  { x: 160, y: 240 },
+  { x: 360, y: 240 },
+  { x: 360, y: 120 },
+  { x: 520, y: 120 },
+  { x: 520, y: 360 },
+  { x: 200, y: 360 },
+  { x: 200, y: 440 },
+  { x: 660, y: 440 },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getDistance(a: Position, b: Position): number {
-  return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+let nextId = 0;
+function uid(): string {
+  return 't' + (++nextId) + '_' + ((Math.random() * 0xffff) | 0).toString(16);
 }
 
-function getAngle(a: Position, b: Position): number {
+function dist(a: Position, b: Position): number {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function angle(a: Position, b: Position): number {
   return Math.atan2(b.y - a.y, b.x - a.x);
 }
 
-function moveTowards(current: Position, target: Position, speed: number): Position {
-  const angle = getAngle(current, target);
-  const dist = getDistance(current, target);
-  
-  if (dist <= speed) return { ...target };
-  
-  return {
-    x: current.x + Math.cos(angle) * speed,
-    y: current.y + Math.sin(angle) * speed,
-  };
+function moveTowards(from: Position, to: Position, speed: number): Position {
+  const d = dist(from, to);
+  if (d <= speed) return { x: to.x, y: to.y };
+  const a = angle(from, to);
+  return { x: from.x + Math.cos(a) * speed, y: from.y + Math.sin(a) * speed };
 }
 
-// ─── Game Logic ──────────────────────────────────────────────────────────────
+/** Distance from point to the nearest path segment */
+export function distToPath(p: Position, path: Position[]): number {
+  let minD = Infinity;
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i];
+    const b = path[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const px = a.x + t * dx;
+    const py = a.y + t * dy;
+    const d = Math.sqrt((p.x - px) ** 2 + (p.y - py) ** 2);
+    if (d < minD) minD = d;
+  }
+  return minD;
+}
+
+export function canPlaceTower(x: number, y: number, state: GameState): boolean {
+  // Must be on screen
+  if (x < TOWER_SIZE || x > GAME_WIDTH - TOWER_SIZE || y < TOWER_SIZE || y > GAME_HEIGHT - TOWER_SIZE) return false;
+  // Not on path
+  if (distToPath({ x, y }, state.path) < PATH_WIDTH + TOWER_SIZE) return false;
+  // Not overlapping another tower
+  for (const t of state.towers) {
+    if (dist(t, { x, y }) < TOWER_SIZE * 2 + 4) return false;
+  }
+  return true;
+}
+
+// ─── Wave composition ────────────────────────────────────────────────────────
+
+function buildWaveQueue(wave: number): InvaderType[] {
+  const queue: InvaderType[] = [];
+
+  if (wave % 10 === 0) {
+    // Boss wave
+    queue.push('boss');
+    for (let i = 0; i < wave; i++) queue.push('drone');
+  } else if (wave % 5 === 0) {
+    // Tank wave
+    const tanks = 2 + Math.floor(wave / 5);
+    for (let i = 0; i < tanks; i++) queue.push('tank');
+    for (let i = 0; i < 4; i++) queue.push('drone');
+  } else if (wave % 3 === 0) {
+    // Scout rush
+    const scouts = 6 + wave;
+    for (let i = 0; i < scouts; i++) queue.push('scout');
+  } else {
+    // Regular drone wave
+    const count = 4 + Math.floor(wave * 1.8);
+    for (let i = 0; i < count; i++) queue.push('drone');
+    // Sprinkle scouts after wave 3
+    if (wave > 3) {
+      for (let i = 0; i < Math.floor(wave / 2); i++) queue.push('scout');
+    }
+  }
+  return queue;
+}
+
+// ─── Initial state ──────────────────────────────────────────────────────────
 
 export function createInitialState(startTime: number): GameState {
   return {
@@ -66,329 +129,213 @@ export function createInitialState(startTime: number): GameState {
     money: INITIAL_MONEY,
     score: 0,
     wave: 0,
-    
     towers: [],
     invaders: [],
     bullets: [],
     particles: [],
-    
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
     path: PATH,
-    
     gameOver: false,
-    gameSpeed: 1,
-    
     waveActive: false,
     enemiesToSpawn: [],
     spawnTimer: 0,
-    
+    waveCountdown: WAVE_COUNTDOWN,
     frame: 0,
     startTime,
-    
-    selectedTowerId: null,
     buildingTowerType: null,
-    cursorX: 0,
-    cursorY: 0,
+    cursorX: -100,
+    cursorY: -100,
   };
 }
 
-export function startNextWave(state: GameState): GameState {
-  const wave = state.wave + 1;
-  const count = 5 + Math.floor(wave * 2); // Increasing enemy count
-  
-  let enemyType: InvaderType = 'drone';
-  if (wave % 5 === 0) enemyType = 'boss';
-  else if (wave % 3 === 0) enemyType = 'tank';
-  else if (wave % 2 === 0) enemyType = 'scout';
-  
-  const queue: InvaderType[] = Array(count).fill(enemyType);
-  
-  // Mixed waves later on
-  if (wave > 5) {
-    const extra = Array(3).fill('drone') as InvaderType[];
-    queue.push(...extra);
-  }
+// ─── Input ──────────────────────────────────────────────────────────────────
 
-  return {
-    ...state,
-    wave,
-    waveActive: true,
-    enemiesToSpawn: queue,
-    spawnTimer: SPAWN_DELAY,
-  };
-}
-
-// ─── Update Loop ─────────────────────────────────────────────────────────────
-
-interface InputState {
+export interface InputState {
   placeTower?: { type: TowerType; x: number; y: number };
-  selectTower?: string | null;
-  cursor?: { x: number; y: number };
 }
 
-export function updateGame(state: GameState, input: InputState, now: number): GameState {
+// ─── Update ─────────────────────────────────────────────────────────────────
+
+export function updateGame(state: GameState, input: InputState): GameState {
   if (state.gameOver) return state;
 
-  // Use a minimal step approach or delta time if needed, for now frame-based
-  const ns = { ...state };
-  ns.frame++;
+  const ns: GameState = {
+    ...state,
+    frame: state.frame + 1,
+    invaders: [...state.invaders],
+    bullets: [...state.bullets],
+    particles: [...state.particles],
+    towers: [...state.towers],
+    enemiesToSpawn: [...state.enemiesToSpawn],
+  };
 
-  // Handle Input
-  if (input.cursor) {
-    ns.cursorX = input.cursor.x;
-    ns.cursorY = input.cursor.y;
-  }
-  
-  if (input.selectTower !== undefined) {
-    ns.selectedTowerId = input.selectTower;
-    ns.buildingTowerType = null;
-  }
-
-  // --- Tower Placement Logic ---
+  // ── Tower placement ──────────────────────────────────────────────────────
   if (input.placeTower) {
     const { type, x, y } = input.placeTower;
     const cost = TOWER_COSTS[type];
-    
-    if (ns.money >= cost) {
-      // Check collision/valid placement logic here (simplified for now)
-      const valid = true;
-      // Could check distance to path to prevent blocking
-      
-      if (valid) {
-        ns.money -= cost;
-        ns.towers = [...ns.towers, {
-          id: crypto.randomUUID(),
-          type,
-          x,
-          y,
-          range: TOWER_STATS[type].range,
-          damage: TOWER_STATS[type].damage,
-          fireRate: TOWER_STATS[type].fireRate,
-          cooldown: 0,
-          level: 1,
-          active: true,
-          angle: 0,
-        }];
-        ns.buildingTowerType = null; 
-      }
+    if (ns.money >= cost && canPlaceTower(x, y, ns)) {
+      ns.money -= cost;
+      const s = TOWER_STATS[type];
+      ns.towers.push({
+        id: uid(), type, x, y,
+        range: s.range, damage: s.damage, fireRate: s.fireRate,
+        cooldown: 0, level: 1, angle: 0,
+      });
     }
   }
 
-  // --- Wave Management ---
-  if (ns.waveActive) {
+  // ── Wave management ──────────────────────────────────────────────────────
+  if (!ns.waveActive) {
+    ns.waveCountdown--;
+    if (ns.waveCountdown <= 0) {
+      ns.wave++;
+      ns.waveActive = true;
+      ns.enemiesToSpawn = buildWaveQueue(ns.wave);
+      ns.spawnTimer = 0;
+      ns.waveCountdown = WAVE_COUNTDOWN;
+    }
+  } else {
     if (ns.enemiesToSpawn.length > 0) {
       ns.spawnTimer--;
       if (ns.spawnTimer <= 0) {
         const type = ns.enemiesToSpawn.shift()!;
-        const stats = INVADER_STATS[type];
-        
-        // Spawn at start of path
+        const s = INVADER_STATS[type];
+        const hpScale = 1 + (ns.wave - 1) * 0.25;
         const start = ns.path[0];
-        ns.invaders = [...ns.invaders, {
-          id: crypto.randomUUID(),
-          type,
-          x: start.x,
-          y: start.y,
-          hp: stats.hp + (ns.wave * stats.hp * 0.2), // HP scaling
-          maxHp: stats.hp + (ns.wave * stats.hp * 0.2),
-          speed: stats.speed,
-          value: stats.value,
-          damage: 1, 
+        ns.invaders.push({
+          id: uid(), type,
+          x: start.x, y: start.y,
+          hp: Math.round(s.hp * hpScale),
+          maxHp: Math.round(s.hp * hpScale),
+          speed: s.speed,
+          value: s.value,
+          damage: 1,
           pathIndex: 0,
-          pathProgress: 0,
           frozen: 0,
-          effect: 'none',
-        }];
+        });
         ns.spawnTimer = SPAWN_DELAY;
       }
     } else if (ns.invaders.length === 0) {
       ns.waveActive = false;
-      // Wave complete logic if needed
-    }
-  } else {
-    // Check if we should auto-start next wave
-    if (ns.invaders.length === 0) {
-      // We will count down spawnTimer into negatives to track delay between waves
-      if (ns.spawnTimer <= -WAVE_DELAY) {
-         return startNextWave(ns); // Start next wave automatically
-      }
-      ns.spawnTimer--;
+      ns.waveCountdown = WAVE_COUNTDOWN;
+      ns.score += ns.wave * 50; // wave complete bonus
     }
   }
-  
-  // --- Invader Movement ---
-  // Create a new array for updated invaders
-  const nextInvaders: Invader[] = [];
-  
+
+  // ── Invader movement ─────────────────────────────────────────────────────
+  const aliveInvaders: Invader[] = [];
   for (const inv of ns.invaders) {
-    let currentSpeed = inv.speed;
+    let spd = inv.speed;
     let frozen = inv.frozen;
-    
-    if (frozen > 0) {
-      currentSpeed *= 0.5;
-      frozen--;
-    }
-    
-    // Logic to move along path segments
-    const nextWaypoint = ns.path[inv.pathIndex + 1];
-    
-    if (!nextWaypoint) {
-      // Reached the end (Citadel)
+    if (frozen > 0) { spd *= 0.4; frozen--; }
+
+    const target = ns.path[inv.pathIndex + 1];
+    if (!target) {
+      // Reached citadel
       ns.citadelHp -= inv.damage;
-      ns.particles.push({
-         x: inv.x, y: inv.y,
-         vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4,
-         life: 30, maxLife: 30,
-         color: COLOR_CITADEL, size: 8,
-         type: 'explosion'
-      });
-      continue; // Remove invader
-    }
-    
-    // Move towards next waypoint
-    const newPos = moveTowards(inv, nextWaypoint, currentSpeed);
-    
-    // Check if we reached the waypoint
-    let nextIndex = inv.pathIndex;
-    if (getDistance(newPos, nextWaypoint) < 1) {
-       nextIndex++;
-    }
-    
-    nextInvaders.push({ 
-      ...inv, 
-      x: newPos.x, 
-      y: newPos.y, 
-      pathIndex: nextIndex,
-      frozen
-    });
-  }
-  ns.invaders = nextInvaders;
-  
-  // Clean up dead invaders (hp check done separately commonly, or implicitly if not pushed)
-  // We'll filter HP <= 0 here just in case damage happens elsewhere
-  ns.invaders = ns.invaders.filter(inv => inv.hp > 0);
-
-  if (ns.citadelHp <= 0) {
-    ns.gameOver = true;
-  }
-
-  // --- Tower Logic ---
-  ns.towers = ns.towers.map(tower => {
-    let cooldown = tower.cooldown;
-    if (cooldown > 0) cooldown--;
-    
-    // Find target
-    const target = ns.invaders.find(inv => getDistance(tower, inv) <= tower.range);
-    
-    let angle = tower.angle;
-    
-    if (target) {
-      // Rotate towards target
-      angle = getAngle(tower, target);
-      
-      // Fire if ready
-      if (cooldown <= 0) {
-        ns.bullets.push({
-          id: crypto.randomUUID(),
-          x: tower.x,
-          y: tower.y,
-          targetId: target.id,
-          speed: 8,
-          damage: tower.damage,
-          active: true,
-          vx: Math.cos(angle) * 8, // Initial velocity towards target
-          vy: Math.sin(angle) * 8,
-          // Map generic types to specific projectile types
-          type: tower.type === 'sniper' ? 'laser' : 
-                tower.type === 'slow' ? 'slow' : 
-                tower.type === 'rapid' ? 'basic' : 'basic', 
-          color: TOWER_STATS[tower.type].color,
+      // Damage particles
+      for (let i = 0; i < 6; i++) {
+        ns.particles.push({
+          x: inv.x, y: inv.y,
+          vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5,
+          life: 25, maxLife: 25, color: '#f59e0b', size: 3 + Math.random() * 3,
         });
-        
-        // Cooldown in frames (60fps assumed)
-        cooldown = 60 / tower.fireRate;
       }
-    }
-    
-    return { ...tower, angle, cooldown };
-  });
-
-  // --- Bullet Logic ---
-  const validBullets: Bullet[] = [];
-  
-  for (const b of ns.bullets) {
-    if (!b.active) continue;
-    
-    // Move bullet
-    const newB = { ...b, x: b.x + b.vx, y: b.y + b.vy };
-    
-    // Check bounds
-    if (newB.x < 0 || newB.x > GAME_WIDTH || newB.y < 0 || newB.y > GAME_HEIGHT) {
       continue;
     }
-    
-    // Check Collision
-    let hit = false;
+
+    const newPos = moveTowards(inv, target, spd);
+    let idx = inv.pathIndex;
+    if (dist(newPos, target) < 1) idx++;
+
+    aliveInvaders.push({ ...inv, x: newPos.x, y: newPos.y, pathIndex: idx, frozen });
+  }
+  ns.invaders = aliveInvaders;
+
+  if (ns.citadelHp <= 0) {
+    ns.citadelHp = 0;
+    ns.gameOver = true;
+    return ns;
+  }
+
+  // ── Tower targeting & shooting ───────────────────────────────────────────
+  for (let ti = 0; ti < ns.towers.length; ti++) {
+    const tower = { ...ns.towers[ti] };
+    ns.towers[ti] = tower;
+
+    if (tower.cooldown > 0) { tower.cooldown--; continue; }
+
+    // Find closest invader in range
+    let bestDist = Infinity;
+    let bestInv: Invader | null = null;
     for (const inv of ns.invaders) {
-       const size = INVADER_STATS[inv.type].size + 5; // Hitbox padding
-       if (getDistance(newB, inv) < size) {
-          hit = true;
-          // Apply damage
-          inv.hp -= newB.damage;
-          
-          if (newB.type === 'slow') {
-            inv.frozen = 120; // Slow duration
-          }
-          
-          // Hit particle
-          ns.particles.push({
-            x: newB.x, y: newB.y,
-            vx: (Math.random() - 0.5) * 2,
-            vy: (Math.random() - 0.5) * 2,
-            life: 10, maxLife: 10,
-            color: newB.color, 
-            size: 3,
-            type: 'spark'
-          });
-          
-          // Kill logic
-          if (inv.hp <= 0) {
-            ns.money += inv.value;
-            ns.score += inv.value * 10;
-            // Explosion particles
-             for(let i=0; i<5; i++) {
-              ns.particles.push({
-                x: inv.x, y: inv.y,
-                vx: (Math.random() - 0.5) * 6,
-                vy: (Math.random() - 0.5) * 6,
-                life: 20, maxLife: 20,
-                color: INVADER_STATS[inv.type].color,
-                size: 4,
-                type: 'explosion'
-              });
-            }
-          }
-          break; // Bullet hits one enemy
-       }
+      const d = dist(tower, inv);
+      if (d <= tower.range && d < bestDist) { bestDist = d; bestInv = inv; }
     }
-    
-    if (!hit) {
-      validBullets.push(newB);
+
+    if (bestInv) {
+      const a = angle(tower, bestInv);
+      tower.angle = a;
+      tower.cooldown = Math.round(60 / tower.fireRate);
+
+      const bulletSpeed = tower.type === 'sniper' ? 14 : 7;
+      ns.bullets.push({
+        x: tower.x + Math.cos(a) * TOWER_SIZE,
+        y: tower.y + Math.sin(a) * TOWER_SIZE,
+        vx: Math.cos(a) * bulletSpeed,
+        vy: Math.sin(a) * bulletSpeed,
+        damage: tower.damage,
+        type: tower.type === 'slow' ? 'slow' : tower.type === 'sniper' ? 'laser' : 'basic',
+        color: TOWER_STATS[tower.type].color,
+      });
     }
   }
-  ns.bullets = validBullets;
-  
-  // Re-filter dead invaders after bullet logic
+
+  // ── Bullet movement & collision ──────────────────────────────────────────
+  const aliveBullets: Bullet[] = [];
+  for (const b of ns.bullets) {
+    const nb: Bullet = { ...b, x: b.x + b.vx, y: b.y + b.vy };
+    if (nb.x < -20 || nb.x > GAME_WIDTH + 20 || nb.y < -20 || nb.y > GAME_HEIGHT + 20) continue;
+
+    let hit = false;
+    for (const inv of ns.invaders) {
+      if (inv.hp <= 0) continue;
+      const hitRadius = INVADER_STATS[inv.type].size + 4;
+      if (dist(nb, inv) < hitRadius) {
+        hit = true;
+        inv.hp -= nb.damage;
+        if (nb.type === 'slow') inv.frozen = Math.max(inv.frozen, 90);
+
+        // Spark
+        ns.particles.push({
+          x: nb.x, y: nb.y,
+          vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3,
+          life: 8, maxLife: 8, color: nb.color, size: 2,
+        });
+
+        if (inv.hp <= 0) {
+          ns.money += inv.value;
+          ns.score += inv.value * 10;
+          for (let i = 0; i < 8; i++) {
+            ns.particles.push({
+              x: inv.x, y: inv.y,
+              vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6,
+              life: 18, maxLife: 18,
+              color: INVADER_STATS[inv.type].color, size: 2 + Math.random() * 3,
+            });
+          }
+        }
+        break;
+      }
+    }
+    if (!hit) aliveBullets.push(nb);
+  }
+  ns.bullets = aliveBullets;
   ns.invaders = ns.invaders.filter(inv => inv.hp > 0);
 
-  // --- Particle Logic ---
-  ns.particles = ns.particles.map(p => ({
-    ...p,
-    x: p.x + p.vx,
-    y: p.y + p.vy,
-    life: p.life - 1
-  })).filter(p => p.life > 0);
+  // ── Particles ────────────────────────────────────────────────────────────
+  ns.particles = ns.particles
+    .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.05, life: p.life - 1 }))
+    .filter(p => p.life > 0);
 
   return ns;
 }

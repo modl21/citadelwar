@@ -11,12 +11,10 @@ export interface Tower extends Position {
   type: TowerType;
   range: number;
   damage: number;
-  fireRate: number; // shots per second
-  cooldown: number; // frames until next shot
+  fireRate: number;
+  cooldown: number;
   level: number;
-  active: boolean; // while placing or active
-  angle: number; // turret rotation
-  preview?: boolean; // is this a placement ghost?
+  angle: number;
 }
 
 export interface Invader extends Position {
@@ -25,23 +23,17 @@ export interface Invader extends Position {
   hp: number;
   maxHp: number;
   speed: number;
-  value: number; // score value when destroyed
-  damage: number; // damage to citadel
-  pathIndex: number; // current index in path
-  pathProgress: number; // 0-1 progress to next waypoint
-  frozen: number; // frames frozen/slowed
-  effect: 'none' | 'slowed' | 'burning';
+  value: number;
+  damage: number;
+  pathIndex: number;
+  frozen: number;
 }
 
 export interface Bullet extends Position {
-  id: string;
-  targetId: string; // homing
-  speed: number;
-  damage: number;
   vx: number;
   vy: number;
-  active: boolean;
-  type: 'basic' | 'laser' | 'missile' | 'slow';
+  damage: number;
+  type: 'basic' | 'laser' | 'slow';
   color: string;
 }
 
@@ -54,40 +46,32 @@ export interface Particle {
   maxLife: number;
   color: string;
   size: number;
-  type: 'spark' | 'smoke' | 'explosion' | 'text';
-  text?: string;
 }
 
 export interface GameState {
   citadelHp: number;
   citadelMaxHp: number;
-  money: number; // resources to build towers (called 'sats' in UI)
+  money: number;
   score: number;
   wave: number;
-  
+
   towers: Tower[];
   invaders: Invader[];
   bullets: Bullet[];
   particles: Particle[];
-  
-  // Game field
-  width: number;
-  height: number;
-  path: Position[]; // Waypoints for invaders to follow
-  
+
+  path: Position[];
+
   gameOver: boolean;
-  gameSpeed: number; // 1x, 2x, etc.
-  
-  // Wave management
+
   waveActive: boolean;
-  enemiesToSpawn: InvaderType[]; // Queue of enemies
-  spawnTimer: number; // frames until next spawn
-  
+  enemiesToSpawn: InvaderType[];
+  spawnTimer: number;
+  waveCountdown: number;
+
   frame: number;
   startTime: number;
-  
-  // Interaction state
-  selectedTowerId: string | null;
+
   buildingTowerType: TowerType | null;
   cursorX: number;
   cursorY: number;

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Zap, Play, Smartphone, Keyboard, Shield, Swords } from 'lucide-react';
+import { Zap, Play, Shield, Swords } from 'lucide-react';
 import type { NSecSigner } from '@nostrify/nostrify';
 
 import { Button } from '@/components/ui/button';
@@ -57,14 +57,12 @@ const Index = () => {
 
   useEffect(() => {
     if (phase !== 'ready') return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         handleLaunchGame();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, handleLaunchGame]);
@@ -75,11 +73,7 @@ const Index = () => {
 
     if (signerRef.current && lightningAddress) {
       try {
-        await publishScore({
-          score,
-          lightning: lightningAddress,
-          signer: signerRef.current,
-        });
+        await publishScore({ score, lightning: lightningAddress, signer: signerRef.current });
       } catch (error) {
         console.error('Failed to publish score:', error);
       }
@@ -92,65 +86,51 @@ const Index = () => {
     setShowPayment(true);
   }, []);
 
-  // Removed old effects logic for now, keeping it clean for the new game canvas
-
   return (
-    <div className="min-h-full bg-[#0d0700] text-foreground overflow-y-auto">
-      {/* Cinematic top glow */}
-      <div className="fixed inset-x-0 top-0 h-56 pointer-events-none z-0 bg-gradient-to-b from-amber-900/12 via-orange-900/8 to-transparent" />
+    <div className="min-h-full bg-[#0a0805] text-foreground overflow-y-auto">
+      {/* Cinematic background effects */}
+      <div className="fixed inset-x-0 top-0 h-56 pointer-events-none z-0 bg-gradient-to-b from-amber-900/10 to-transparent" />
+      <div className="fixed inset-0 pointer-events-none z-[45] bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.35)_100%)]" />
 
-      {/* Dust/grit overlay */}
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03]">
-        <div className="w-full h-[200%] bg-[repeating-linear-gradient(transparent,transparent_2px,rgba(200,120,30,0.04)_2px,rgba(200,120,30,0.04)_4px)] animate-scanline" />
-      </div>
-
-      {/* Vignette-style edge darkening */}
-      <div className="fixed inset-0 pointer-events-none z-[45] bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.38)_100%)]" />
-
-      {/* Distant heat shimmer glow at horizon */}
-      <div className="fixed bottom-0 left-0 right-0 h-36 pointer-events-none z-0 bg-gradient-to-t from-orange-900/20 via-orange-800/10 to-transparent" />
-
-      <div className="relative z-10 flex flex-col items-center min-h-full px-4 py-6 gap-5">
-        <header className="w-full max-w-4xl flex items-center justify-between gap-4 mb-2">
-          {/* Citadel Arcade Badge */}
+      <div className="relative z-10 flex flex-col items-center min-h-full px-3 sm:px-4 py-4 sm:py-6 gap-4 sm:gap-5">
+        {/* Header */}
+        <header className="w-full max-w-2xl flex items-center justify-between gap-4">
           <a
             href="https://citadelarcade.com"
             target="_blank"
             rel="noopener noreferrer"
             className="transition-transform hover:scale-105 active:scale-95"
           >
-            <div className="flex h-10 items-center justify-center rounded-sm bg-white px-3 shadow-[0_0_25px_rgba(255,255,255,0.1)]">
-              <span className="text-[13px] font-[900] tracking-tighter text-black uppercase whitespace-nowrap" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="flex h-8 sm:h-10 items-center justify-center rounded-sm bg-white px-2 sm:px-3 shadow-[0_0_20px_rgba(255,255,255,0.08)]">
+              <span className="text-[11px] sm:text-[13px] font-[900] tracking-tighter text-black uppercase whitespace-nowrap" style={{ fontFamily: 'Inter, sans-serif' }}>
                 CITADEL ARCADE
               </span>
             </div>
           </a>
-
           <a
             href="https://primal.net/odell"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] font-[900] uppercase tracking-[0.2em] text-white/20 hover:text-white transition-colors font-sans"
+            className="text-[9px] sm:text-[10px] font-[900] uppercase tracking-[0.2em] text-white/20 hover:text-white transition-colors font-sans"
           >
             CURATED BY <span className="text-white/40">ODELL</span>
           </a>
         </header>
 
-        {/* Weekly Winner Banner */}
         <WeeklyWinnerBanner />
 
         {/* Title */}
-        <div className="text-center space-y-2">
-          <h1 className="font-pixel text-xl md:text-2xl text-amber-300 tracking-[0.22em] animate-float drop-shadow-[0_0_14px_rgba(245,158,11,0.55)]">
+        <div className="text-center space-y-1">
+          <h1 className="font-pixel text-lg sm:text-xl md:text-2xl text-amber-300 tracking-[0.22em] animate-float drop-shadow-[0_0_14px_rgba(245,158,11,0.5)]">
             CITADEL WAR
           </h1>
-          <p className="text-xs text-orange-200/70 max-w-xs mx-auto tracking-wide">
+          <p className="text-[11px] sm:text-xs text-orange-200/60 max-w-xs mx-auto tracking-wide">
             Defend the fortress. Repel the invaders.
           </p>
         </div>
 
-        {/* Game Area */}
-        <div className="relative w-full max-w-[800px] aspect-[4/3] bg-black rounded-lg shadow-2xl overflow-hidden border border-amber-900/40">
+        {/* Game Area — the canvas manages its own sizing */}
+        <div className="relative w-full max-w-[640px]">
           <GameCanvas
             onGameOver={handleGameOver}
             isPlaying={phase === 'playing'}
@@ -159,8 +139,8 @@ const Index = () => {
 
           {/* Idle overlay */}
           {phase === 'idle' && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/60 backdrop-blur-[3px] rounded-lg">
-              <div className="text-center space-y-5 p-6">
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/65 backdrop-blur-[3px] rounded-lg" style={{ aspectRatio: '640/480' }}>
+              <div className="text-center space-y-4 p-6">
                 <div className="flex justify-center">
                   <div className="relative">
                     <div className="size-14 rounded-xl bg-orange-800/30 border border-orange-600/40 flex items-center justify-center animate-float">
@@ -171,55 +151,32 @@ const Index = () => {
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <p className="text-[10px] text-orange-200/60 max-w-[220px] mx-auto leading-relaxed">
-                    Protect the Citadel at all costs.
-                  </p>
-                </div>
-
+                <p className="text-xs text-orange-200/60 max-w-[240px] mx-auto leading-relaxed">
+                  Build towers. Destroy invaders. Protect the Citadel.
+                </p>
                 <Button
                   onClick={handleStartGame}
-                  className="bg-amber-500 text-black font-pixel text-xs hover:bg-amber-400 h-12 px-8 shadow-[0_12px_34px_rgba(0,0,0,0.42),0_0_24px_rgba(245,158,11,0.28)] hover:shadow-[0_18px_46px_rgba(0,0,0,0.5),0_0_36px_rgba(245,158,11,0.5)] transition-shadow border border-amber-600/50"
+                  className="bg-amber-500 text-black font-pixel text-xs hover:bg-amber-400 h-12 px-8 shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_20px_rgba(245,158,11,0.25)] border border-amber-600/50"
                 >
                   <Zap className="size-4 mr-2 fill-current" />
                   INSERT COIN
                 </Button>
-
-                {/* Controls hint */}
-                <div className="flex flex-col items-center gap-1.5 text-orange-300/40">
-                  {isMobile ? (
-                    <div className="flex items-center gap-1.5">
-                      <Smartphone className="size-3" />
-                      <span className="text-[8px] font-pixel">TAP TO PLACE TOWERS</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <Keyboard className="size-3" />
-                      <span className="text-[8px] font-pixel">CLICK TO PLACE TOWERS</span>
-                    </div>
-                  )}
-                </div>
+                <p className="text-[9px] font-pixel text-orange-300/40">
+                  {isMobile ? 'TAP TO PLACE TOWERS' : 'CLICK TO PLACE TOWERS'}
+                </p>
               </div>
             </div>
           )}
 
-          {/* Ready overlay — payment received, waiting to start */}
+          {/* Ready overlay */}
           {phase === 'ready' && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 backdrop-blur-[2px] rounded-lg">
-              <div className="text-center space-y-6 p-6">
-                <div className="space-y-2">
-                  <p className="font-pixel text-[10px] text-amber-500/70 tracking-wider">
-                    SATS RECEIVED
-                  </p>
-                  <p className="font-pixel text-sm text-amber-300 tracking-wider">
-                    PREPARE DEFENSES
-                  </p>
-                </div>
-
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 backdrop-blur-[2px] rounded-lg" style={{ aspectRatio: '640/480' }}>
+              <div className="text-center space-y-5 p-6">
+                <p className="font-pixel text-[10px] text-amber-500/70 tracking-wider">SATS RECEIVED</p>
+                <p className="font-pixel text-sm text-amber-300 tracking-wider">PREPARE DEFENSES</p>
                 <Button
                   onClick={handleLaunchGame}
-                  className="bg-amber-500 text-black font-pixel text-sm hover:bg-amber-400 h-14 px-10 shadow-[0_16px_40px_rgba(0,0,0,0.48),0_0_30px_rgba(245,158,11,0.35)] hover:shadow-[0_22px_56px_rgba(0,0,0,0.56),0_0_48px_rgba(245,158,11,0.55)] transition-shadow animate-pulse-glow border border-amber-600/50"
+                  className="bg-amber-500 text-black font-pixel text-sm hover:bg-amber-400 h-14 px-10 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(245,158,11,0.3)] animate-pulse-glow border border-amber-600/50"
                 >
                   <Play className="size-5 mr-2 fill-current" />
                   START WAVE
@@ -230,69 +187,39 @@ const Index = () => {
 
           {/* Game Over overlay */}
           {phase === 'gameOver' && (
-            <GameOverOverlay
-              score={finalScore}
-              isPublishing={isPublishing}
-              onPlayAgain={handlePlayAgain}
-            />
+            <div className="absolute inset-0 z-10" style={{ aspectRatio: '640/480' }}>
+              <GameOverOverlay
+                score={finalScore}
+                isPublishing={isPublishing}
+                onPlayAgain={handlePlayAgain}
+              />
+            </div>
           )}
         </div>
 
-        {/* Hazard legend */}
-        <div className="w-full max-w-lg mx-auto">
-          <div className="flex items-center justify-center gap-4 text-[8px] font-pixel text-orange-300/60 flex-wrap">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 bg-red-600 rounded-[2px]" />
-              INVADERS
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 bg-blue-500 rounded-[2px] border border-blue-400/35" />
-              TOWER
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 bg-amber-500/80 border border-amber-300/20" />
-              CITADEL
-            </span>
-          </div>
-        </div>
-
         {/* Total play count */}
-        <p className="text-[9px] font-pixel text-orange-200/35 tracking-wider">
+        <p className="text-[9px] font-pixel text-orange-200/30 tracking-wider">
           TOTAL WARS {typeof totalPlayCount === 'number' ? totalPlayCount.toLocaleString() : '...'}
         </p>
 
-        {/* Leaderboard */}
         <Leaderboard />
 
-        {/* Footer */}
-        <footer className="text-center text-[10px] text-orange-300/30 pb-4 space-y-1">
+        <footer className="text-center text-[10px] text-orange-300/25 pb-4 space-y-1">
           <p>
-            Scores on{' '}
-            <span className="text-amber-500/50">Nostr</span>
+            Scores on <span className="text-amber-500/40">Nostr</span>
             {' '}&middot;{' '}
-            Payments via{' '}
-            <span className="text-amber-500/50">Lightning</span>
+            Payments via <span className="text-amber-500/40">Lightning</span>
           </p>
           <p>
             Vibed with{' '}
-            <a
-              href="https://shakespeare.diy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-amber-500/50 hover:text-amber-400/80 transition-colors"
-            >
+            <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="text-amber-500/40 hover:text-amber-400/70 transition-colors">
               Shakespeare
             </a>
           </p>
         </footer>
       </div>
 
-      {/* Payment Dialog */}
-      <PaymentGate
-        open={showPayment}
-        onPaid={handlePaid}
-        onClose={() => setShowPayment(false)}
-      />
+      <PaymentGate open={showPayment} onPaid={handlePaid} onClose={() => setShowPayment(false)} />
     </div>
   );
 };
