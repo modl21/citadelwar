@@ -125,7 +125,7 @@ const Index = () => {
             CITADEL WAR
           </h1>
           <p className="text-[11px] sm:text-xs text-blue-200/50 max-w-xs mx-auto tracking-wide">
-            Defend the fortress. Repel the invaders.
+            Defend the fortress. (Map Changes Weekly)
           </p>
         </div>
 
